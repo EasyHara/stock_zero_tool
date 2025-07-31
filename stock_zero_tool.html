@@ -15,21 +15,22 @@
     .back-btn:hover { background:#d2e3da; color:#184c37; border-color:#92bfa7;}
     .main-title { font-size:2rem; font-weight:700; color:#184c37; margin-bottom:20px; letter-spacing:0.02em;}
     .desc { font-size:15px; color:#427057; margin-bottom:26px; line-height:1.7;}
-    .file-btn-wrap { display:flex; align-items:center; gap:16px; margin-bottom:28px;}
+    .file-btn-wrap { display:flex; align-items:center; gap:12px; margin-bottom:28px;}
     .custom-file-label { background:#e1ece6; color:#2d684a; border:1.2px solid #b0c9bb; border-radius:8px; padding:8px 18px; font-size:15px; font-weight:500; cursor:pointer; transition:background 0.15s, border 0.14s; display:inline-block;}
     .custom-file-label:hover { background:#d2e3da; color:#184c37; border-color:#89ac98;}
-    #fileName { font-size:14.5px; color:#5b6c65;}
-    .toggle-wrap { margin-bottom:18px; display:flex; align-items:center; gap:17px;}
-    .toggle-btn { min-width:130px; height:40px; background:#e1ece6; color:#2d684a; border:1.3px solid #b0c9bb; border-radius:10px; font-size:15.5px; font-weight:600; cursor:pointer; transition:background 0.14s, border 0.14s, color 0.12s; outline:none; margin-right:3px;}
+    #fileName { font-size:14.5px; color:#5b6c65; min-width:130px;}
+    .toggle-btn { min-width:130px; height:40px; background:#e1ece6; color:#2d684a; border:1.3px solid #b0c9bb; border-radius:10px; font-size:15.5px; font-weight:600; cursor:pointer; transition:background 0.14s, border 0.14s, color 0.12s; outline:none;}
     .toggle-btn.on { background:#61ad80 !important; color:#fff !important; border-color:#46855b !important;}
+    .reset-btn { min-width:80px; height:40px; background:#f7e6e6; color:#a85b5b; border:1.2px solid #c5a3a3; border-radius:10px; font-size:15.2px; font-weight:600; cursor:pointer; margin-left:3px; transition:background 0.12s, border 0.14s, color 0.13s;}
+    .reset-btn:hover { background:#ffdada; border-color:#d68c8c; color:#b43939;}
     .tip { font-size:13px; color:#818484; margin-bottom:3px; margin-top:-9px; margin-left:2px;}
     .option-cb { font-size:14.5px; color:#306e49; margin-left:2px; margin-bottom:5px;}
     .option-cb input[type=checkbox] { accent-color:#61ad80; margin-right:4px; }
-    .code-list-wrap { margin:18px 0 30px 0; padding:0; display:flex; flex-wrap:wrap; gap:11px 15px; min-height:38px;}
+    .code-list-wrap { margin:18px 0 8px 0; padding:0; display:flex; flex-wrap:wrap; gap:11px 15px; min-height:38px; flex-direction: row;}
     .code-btn { padding:8px 18px; font-size:15px; border-radius:7px; border:1.3px solid #c3d7c5; background:#e1ece6; color:#20432a; font-weight:500; cursor:pointer; transition:background 0.15s, border 0.13s, color 0.13s; user-select:none; outline:none; position:relative;}
     .code-btn.selected, .code-btn:active { background:#61ad80 !important; color:#fff !important; border-color:#46855b !important;}
     .code-btn:hover:not(.selected) { background:#d2e3da; border-color:#92bfa7; color:#184c37;}
-    .option-chooser { width:100%; max-width:480px; background:#f2f8f3; border-radius:10px; margin:10px 0 10px 0; padding:18px 18px 11px 18px; border:1.2px solid #d3e6d8; box-shadow:0 2px 12px rgba(40,80,60,0.08); display:flex; flex-direction:column; gap:12px 0; animation:fadein 0.15s; z-index:10; position:relative;}
+    .option-chooser { width:100%; max-width:600px; min-width:320px; background:#f2f8f3; border-radius:10px; margin:16px 0 18px 0; padding:18px 18px 11px 18px; border:1.2px solid #d3e6d8; box-shadow:0 2px 12px rgba(40,80,60,0.08); display:flex; flex-direction:column; gap:12px 0; animation:fadein 0.15s; z-index:10; position:relative;}
     @keyframes fadein { from { opacity:0; transform:translateY(-5px);} to   { opacity:1; transform:none;}}
     .option-title { font-size:15.2px; color:#386c52; font-weight:500; margin-bottom:3px;}
     .opt-group { display:flex; flex-wrap:wrap; gap:8px 10px; margin-bottom:2px;}
@@ -57,61 +58,78 @@
       <input type="file" id="files" multiple accept=".xls,.xlsx" style="display:none;">
       <button type="button" class="custom-file-label" onclick="document.getElementById('files').click();">엑셀 파일 선택</button>
       <span id="fileName">파일을 업로드 해주세요</span>
-    </div>
-    <div class="toggle-wrap">
       <button id="togglePartialBtn" class="toggle-btn" type="button">색상,사이즈별 품절 OFF</button>
-      <div class="tip" id="total-codes-tip"></div>
+      <button id="resetBtn" class="reset-btn" type="button">초기화</button>
     </div>
-    <!-- 여기서부터 품절외 99999 체크박스 추가 -->
+    <div class="tip" id="total-codes-tip"></div>
     <div class="option-cb" style="margin-bottom:16px;">
       <label><input type="checkbox" id="setRestStock" checked>품절 외 재고 99999</label>
     </div>
     <div id="code-list" class="code-list-wrap"></div>
+    <!-- 옵션창은 동적으로 code-list 아래 한 곳에만 붙음 -->
     <button id="downloadBtn" class="action-btn" disabled>선택 품절처리 & 파일 다운로드</button>
   </div>
   <script>
-    // [메인으로 돌아가기] 버튼 (주소 반영!)
     document.getElementById('backToMainBtn').addEventListener('click', function() {
       window.location.href = 'https://easyhara.github.io/smartstore_options/smartstore_options.html';
     });
 
     let fileSheets = [];
     let allCodes = [];
-    let selectedCodes = new Set();  // 관리코드 전체 품절(OFF모드에서)
+    let selectedCodes = new Set();
     let partialMode = false;
-    let partialMap = {}; // {관리코드: Set([색상-사이즈, ...])}
-    // 체크박스 상태 변수
+    let partialMap = {};
     let setRestStock = true;
 
     document.getElementById('setRestStock').addEventListener('change', function() {
       setRestStock = this.checked;
     });
 
+    // ★★★★★ 초기화 함수 추가 ★★★★★
+    function resetAll() {
+      fileSheets = [];
+      allCodes = [];
+      selectedCodes = new Set();
+      partialMap = {};
+      partialMode = false;
+      setRestStock = true;
+      document.getElementById('files').value = '';
+      document.getElementById('fileName').textContent = '파일을 업로드 해주세요';
+      document.getElementById('togglePartialBtn').textContent = "색상,사이즈별 품절 OFF";
+      document.getElementById('togglePartialBtn').classList.remove('on');
+      document.getElementById('setRestStock').checked = true;
+      document.getElementById('code-list').innerHTML = '';
+      document.getElementById('downloadBtn').disabled = true;
+      document.getElementById('total-codes-tip').textContent = '';
+      // 옵션창도 모두 닫기
+      document.querySelectorAll('.option-chooser').forEach(el => el.remove());
+    }
+
+    // 초기화 버튼 이벤트 연결
+    document.getElementById('resetBtn').addEventListener('click', resetAll);
+
     function parseValues(str) {
       if(!str) return [];
-      return str
-        .split(/[,，·､\/／]/g)
-        .map(s=>s.trim())
-        .filter(Boolean);
+      return str.split(/[,，·､\/／]/g).map(s=>s.trim()).filter(Boolean);
     }
     function uniqueSort(arr) {
       return Array.from(new Set(arr)).sort();
     }
 
+    // 파일 선택 input: 파일 추가시 기존 fileSheets에 추가(초기화 안 하면 누적)
     document.getElementById('files').addEventListener('change', function(e) {
       const files = Array.from(e.target.files);
       if (!files.length) return;
-      fileSheets = [];
-      allCodes = [];
-      selectedCodes.clear();
-      partialMap = {};
-      document.getElementById('code-list').innerHTML = "";
-      document.getElementById('fileName').textContent = files.map(f=>f.name).join(', ');
-      document.getElementById('downloadBtn').disabled = true;
-      document.getElementById('total-codes-tip').textContent = "관리코드를 불러오는 중입니다...";
-
-      let readCnt = 0, codeSet = new Set();
+      let prevFileNames = fileSheets.map(f=>f.fileName);
+      let codeSet = new Set(allCodes);
+      let readCnt = 0;
       files.forEach(file => {
+        // 같은 파일명 이미 있으면 skip
+        if(prevFileNames.includes(file.name)) {
+          readCnt++;
+          if(readCnt === files.length) showCodes();
+          return;
+        }
         const reader = new FileReader();
         reader.onload = function(evt) {
           const wb = XLSX.read(evt.target.result, {type: 'array'});
@@ -122,6 +140,8 @@
           readCnt++;
           if(readCnt === files.length) {
             allCodes = Array.from(codeSet);
+            document.getElementById('fileName').textContent =
+              fileSheets.map(f=>f.fileName).join(', ');
             showCodes();
           }
         };
@@ -137,11 +157,14 @@
       partialMap = {};
       showCodes();
       document.getElementById('downloadBtn').disabled = true;
+      // 옵션창도 닫기
+      document.querySelectorAll('.option-chooser').forEach(el => el.remove());
     });
 
     function showCodes() {
       const listDiv = document.getElementById('code-list');
       listDiv.innerHTML = '';
+      document.querySelectorAll('.option-chooser').forEach(el => el.remove()); // 옵션창 모두 제거
       if(!allCodes.length) {
         document.getElementById('total-codes-tip').textContent = '업로드된 파일에서 관리코드가 없습니다.';
         return;
@@ -168,21 +191,24 @@
           });
         }
         else {
-          btn.classList.toggle('selected', partialMap[code]);
+          btn.classList.toggle('selected', !!partialMap[code]);
           btn.addEventListener('click', function(e) {
-            if(btn.nextSibling && btn.nextSibling.classList?.contains('option-chooser')) {
-              btn.nextSibling.remove();
+            // 옵션창 모두 닫기
+            document.querySelectorAll('.option-chooser').forEach(el => el.remove());
+            // 다른 버튼 selected 해제
+            document.querySelectorAll('.code-btn.selected').forEach(b=>{
+              if(b!==btn) b.classList.remove('selected');
+            });
+            // 옵션창 이미 열려있으면 닫기
+            if(btn.classList.contains('selected')) {
               btn.classList.remove('selected');
               delete partialMap[code];
               updateTip();
               document.getElementById('downloadBtn').disabled = !hasPartialAny();
               return;
             }
-            document.querySelectorAll('.option-chooser').forEach(el => el.remove());
-            document.querySelectorAll('.code-btn.selected').forEach(b=>{
-              if(b!==btn) b.classList.remove('selected');
-            });
             btn.classList.add('selected');
+            // option-chooser 생성
             let optWrap = document.createElement('div');
             optWrap.className = 'option-chooser';
             let allRows = [];
@@ -247,7 +273,8 @@
               document.getElementById('downloadBtn').disabled = !hasPartialAny();
             });
             optWrap.appendChild(closeBtn);
-            btn.parentNode.insertBefore(optWrap, btn.nextSibling);
+            // <<<<<< 옵션창을 항상 code-list-wrap(버튼 라인) 바로 아래 한 번만 띄우기!
+            document.getElementById('code-list').after(optWrap);
             partialMap[code] = selSet;
             updateTip();
             document.getElementById('downloadBtn').disabled = !hasPartialAny();
@@ -277,12 +304,10 @@
         return alert('옵션 조합을 1개 이상 선택하세요.');
       const zip = new JSZip();
       fileSheets.forEach(({fileName, rows}) => {
-        // 기존 재고 복원용
         let stockBackup = rows.map(r => r['재고수량']);
         let changed = false;
         rows.forEach((r, idx) => {
           if(!r['관리코드']) return;
-          // 전체 품절(OFF)
           if(!partialMode) {
             if(selectedCodes.has(r['관리코드'])) {
               r['재고수량'] = 0;
@@ -290,11 +315,9 @@
             } else if(setRestStock) {
               r['재고수량'] = 99999;
             } else {
-              // 체크 해제면 기존값 복원
               r['재고수량'] = stockBackup[idx];
             }
           }
-          // 옵션별 품절(ON)
           else {
             let sels = partialMap[r['관리코드']];
             let changedThisRow = false;
@@ -303,7 +326,6 @@
               else r['재고수량'] = stockBackup[idx];
               return;
             }
-            // 색상/사이즈 매칭
             let colors = parseValues(r['색상']);
             let sizes  = parseValues(r['사이즈']);
             let combos = [];
@@ -322,14 +344,12 @@
                 changedThisRow = true;
               }
             }
-            // 품절 선택 안된건 99999 or 기존값
             if(!changedThisRow) {
               if(setRestStock) r['재고수량'] = 99999;
               else r['재고수량'] = stockBackup[idx];
             }
           }
         });
-        // 저장(파일명은 원본 그대로)
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "옵션데이터");
