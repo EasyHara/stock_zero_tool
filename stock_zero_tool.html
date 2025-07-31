@@ -584,8 +584,14 @@ document.getElementById('downloadBtn').addEventListener('click', function() {
         }
       }
       let rowCopy = {...row};
-      if (isSoldout) rowCopy['재고'] = 0;
-      else if (fillStock) rowCopy['재고'] = 99999;
+      let stockCol = '';
+      if ('재고수량' in rowCopy) stockCol = '재고수량';
+      else if ('재고' in rowCopy) stockCol = '재고';
+      else stockCol = '재고수량'; // 없으면 새로 만듦
+
+      if (isSoldout) rowCopy[stockCol] = 0;
+      else if (fillStock) rowCopy[stockCol] = 99999;
+
       return rowCopy;
     });
     let ws = XLSX.utils.json_to_sheet(newData);
