@@ -323,31 +323,38 @@ function toSafeId(str) {
 }
 
 function extractColorAndSize(row) {
-  // 1. B열에 색상/사이즈가 있으면 그대로
   let color = row['색상'] ? row['색상'].toString().trim() : '';
   let size  = row['사이즈'] ? row['사이즈'].toString().trim() : '';
-  // 2. 제품선택/추가상품값이 있으면 '/'로 분리해 옵션 추출
   let base = row['제품선택'] || row['추가상품값'] || '';
-  let opts = [];
-  if (base && base.includes('/')) {
+
+  if (!color && base && base.includes('/')) {
+    let arr = base.split('/').map(x => x.trim());
+    color = arr[arr.length - 1];
+  }
+
+  if (!size && base && base.includes('/')) {
+    let opts = [];
     let spl = base.split('/').map(x => x.trim());
     for (let v of spl) {
-      // 숫자, 영문 FREE/S/M/L/XL, 대표 색상만 추출
-      if (/^(\d{2,3}|2[3-9]0|300|FREE|S|M|L|XL|블랙|화이트|네이비|차콜|그레이|아이보리|베이지|라이트블루|스카이블루|카키|레드|브라운|연두|곤색|올리브|실버|골드|진회색|연베이지|다크그레이|진청|남색|회색|주황|보라|하늘|오렌지|청색|검정|핑크|그린)$/i.test(v)) {
+      if (/^(FREE|S|M|L|XL|\d{2,3})$/i.test(v)) {
         opts.push(v);
       }
     }
-    // 색상·사이즈 구분 없이, B열 값이 비어있으면 base에서 추출
-    if (!color && opts.length > 0) color = opts.find(x => isNaN(x)) || '';
-    if (!size && opts.length > 0) size = opts.find(x => !isNaN(x) || /^FREE|S|M|L|XL$/i.test(x)) || '';
+    if (opts.length > 0) size = opts.find(x => !isNaN(x) || /^FREE|S|M|L|XL$/i.test(x)) || '';
   }
-  // 3. 사이즈에 90/SH-2401처럼 붙은 경우, 앞자리만 사용
+
   if (size && size.includes('/')) size = size.split('/')[0].trim();
+
+  // 여기가 중요!
+  console.log('[extractColorAndSize]', base, '→', 'color:', color, 'size:', size);
+
   return {
     color: color || '',
     size: size || ''
   };
 }
+
+
 
 let fileList = [], fileDataArr = [], allRows = [], uniqueCodes = [], soldoutState = {};
 let optionMode = false, selectedCode = null;
@@ -445,17 +452,17 @@ function updateCodeBtns() {
     btn.onclick = (e) => {
   e.stopPropagation();
   if (optionMode) {
-    // ... (색상/사이즈별 개별 토글은 그대로)
+    // 여기 추가!!
+    selectedCode = code;
+    updateCodeBtns();
+    // 팝업 열리는 조건은 updateCodeBtns() 내에서 showOptionSelect로 처리됨
   } else {
-    // ★ 3단계 토글!
+    // 기존 전체 품절/단종 토글 로직 유지
     if (!soldoutState[code] || !soldoutState[code].전체) {
-      // 1회 클릭: 전체 품절
       soldoutState[code] = { 전체: "soldout", 복합: [] };
     } else if (soldoutState[code].전체 === "soldout") {
-      // 2회 클릭: 전체 단종
       soldoutState[code].전체 = "discont";
     } else if (soldoutState[code].전체 === "discont") {
-      // 3회 클릭: 전체 해제
       soldoutState[code] = { 전체: false, 복합: [] };
     }
     selectedCode = null;
@@ -463,6 +470,7 @@ function updateCodeBtns() {
     updateSoldoutList();
   }
 };
+
 
     wrap.appendChild(btn);
     // --- 옵션 버튼 ---
