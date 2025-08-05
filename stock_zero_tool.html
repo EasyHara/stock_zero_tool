@@ -244,6 +244,20 @@ body {
 }
 .download-btn:hover { background: #bce3c7; color: #155c3f; border-color: #5cb88a; }
 
+.option-btn.selected {
+  background: #f3d8d8 !important;
+  color: #b45454 !important;
+  border-color: #e1bbbb;
+  font-weight: 600;
+}
+.option-btn.discont {
+  background: #533e8e !important;
+  color: #fff !important;
+  border-color: #6c4ff8;
+  font-weight: 700;
+}
+.code-btn.discont { background: #856ed9 !important; color: #fff !important; border-color: #533e8e; }
+
 @media (max-width: 1100px) {
   .container { flex-direction: column; max-width: 99vw; padding: 22px 3vw; }
   .main-area, .side-area { min-width: unset; width: unset; }
@@ -423,28 +437,33 @@ function updateCodeBtns() {
     btn.id = 'codeBtn_' + toSafeId(code);
     btn.className = 'code-btn';
     btn.textContent = code;
-    if (soldoutState[code]?.전체) btn.classList.add('selected');
+    if (soldoutState[code]?.전체 === "soldout") btn.classList.add('selected');   // (예: 파란/빨간색)
+  if (soldoutState[code]?.전체 === "discont") btn.classList.add('discont');    // (예: 보라/회색 등 추가)
+
     else if ((soldoutState[code]?.복합 || []).length > 0) btn.classList.add('has-soldout');
     if (selectedCode === code) btn.classList.add('selected');
     btn.onclick = (e) => {
-      e.stopPropagation();
-      if (optionMode) {
-        if (selectedCode === code) {
-          selectedCode = null;
-          updateCodeBtns();
-          return;
-        }
-        selectedCode = code;
-        updateCodeBtns();
-      } else {
-        soldoutState[code] = soldoutState[code]?.전체
-          ? { 전체: false, 복합: [] }
-          : { 전체: true, 복합: [] };
-        selectedCode = null;
-        updateCodeBtns();
-        updateSoldoutList();
-      }
-    };
+  e.stopPropagation();
+  if (optionMode) {
+    // ... (색상/사이즈별 개별 토글은 그대로)
+  } else {
+    // ★ 3단계 토글!
+    if (!soldoutState[code] || !soldoutState[code].전체) {
+      // 1회 클릭: 전체 품절
+      soldoutState[code] = { 전체: "soldout", 복합: [] };
+    } else if (soldoutState[code].전체 === "soldout") {
+      // 2회 클릭: 전체 단종
+      soldoutState[code].전체 = "discont";
+    } else if (soldoutState[code].전체 === "discont") {
+      // 3회 클릭: 전체 해제
+      soldoutState[code] = { 전체: false, 복합: [] };
+    }
+    selectedCode = null;
+    updateCodeBtns();
+    updateSoldoutList();
+  }
+};
+
     wrap.appendChild(btn);
     // --- 옵션 버튼 ---
     if (optionMode && selectedCode === code) {
@@ -494,15 +513,28 @@ function showOptionSelect(code, wrapElem, colors, sizes) {
           const b = document.createElement('button');
           b.className = 'option-btn';
           b.textContent = `${color} / ${size}`;
-          if (soldoutState[code]?.복합?.find(o => o.색상 === color && o.사이즈 === size)) b.classList.add('selected');
+          let opt = soldoutState[code]?.복합?.find(o => o.색상 === color && o.사이즈 === size);
+if (opt && opt.상태 === "soldout") b.classList.add('selected');
+if (opt && opt.상태 === "discont") b.classList.add('discont');
+
           b.onclick = (e) => {
-            e.stopPropagation();
-            soldoutState[code] = soldoutState[code] || { 전체: false, 복합: [] };
-            let idx = soldoutState[code].복합.findIndex(o => o.색상 === color && o.사이즈 === size);
-            if (idx >= 0) soldoutState[code].복합.splice(idx, 1);
-            else soldoutState[code].복합.push({ 색상: color, 사이즈: size });
-            updateSoldoutList(); updateCodeBtns();
-          };
+  e.stopPropagation();
+  soldoutState[code] = soldoutState[code] || { 전체: false, 복합: [] };
+  let idx = soldoutState[code].복합.findIndex(o => o.색상 === color && o.사이즈 === size);
+  if (idx < 0) {
+    // 1회 클릭: 품절
+    soldoutState[code].복합.push({ 색상: color, 사이즈: size, 상태: "soldout" });
+  } else if (soldoutState[code].복합[idx].상태 === "soldout") {
+    // 2회 클릭: 단종
+    soldoutState[code].복합[idx].상태 = "discont";
+  } else if (soldoutState[code].복합[idx].상태 === "discont") {
+    // 3회 클릭: 선택 해제
+    soldoutState[code].복합.splice(idx, 1);
+  }
+  updateSoldoutList();
+  updateCodeBtns();
+};
+
           grid.appendChild(b);
         }
       }
@@ -556,12 +588,19 @@ function updateSoldoutList() {
   ul.innerHTML = '';
   let any = false;
   for (let code of uniqueCodes) {
-    if (soldoutState[code]?.전체) {
-      ul.innerHTML += `<li><b>${code}</b> 전체 품절</li>`;
-      any = true;
-    } else if ((soldoutState[code]?.복합||[]).length > 0) {
+    if (soldoutState[code]?.전체 === "soldout") {
+  ul.innerHTML += `<li><b>${code}</b> 전체 품절</li>`;
+  any = true;
+} else if (soldoutState[code]?.전체 === "discont") {
+  ul.innerHTML += `<li><b>${code}</b> 전체 <span style="color:#533e8e;font-weight:700;">단종</span></li>`;
+  any = true;
+}
+
+    else if ((soldoutState[code]?.복합||[]).length > 0) {
       for (let opt of soldoutState[code].복합) {
-        ul.innerHTML += `<li><b>${code}</b> ${opt.색상?opt.색상+'/':''}${opt.사이즈||''} 품절</li>`;
+        let stateLabel = opt.상태 === "discont" ? '<span style="color:#533e8e;font-weight:700;">단종</span>' : '품절';
+ul.innerHTML += `<li><b>${code}</b> ${opt.색상?opt.색상+'/':''}${opt.사이즈||''} ${stateLabel}</li>`;
+
         any = true;
       }
     }
@@ -577,32 +616,38 @@ document.getElementById('downloadBtn').addEventListener('click', async function(
     let newData = data.map(row => {
   let code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
   let target = soldoutState[code];
-  let isSoldout = false;
-  if (target?.전체) isSoldout = true;
-  if (!isSoldout && (target?.복합||[]).length > 0) {
+  let isSoldout = false, isDiscont = false;
+if (target?.전체 === "discont") isDiscont = true;
+else if (target?.전체 === "soldout") isSoldout = true;
+
+
+  // 품절/단종 체크
+  if (!isSoldout && (target?.복합 || []).length > 0) {
     for (let opt of target.복합) {
       let { color, size } = extractColorAndSize(row);
       let matchColor = (!opt.색상 || (color == opt.색상));
       let matchSize = (!opt.사이즈 || (size == opt.사이즈));
-      if (matchColor && matchSize) isSoldout = true;
+      if (matchColor && matchSize) {
+        if (opt.상태 === "discont") isDiscont = true; // 단종
+        if (opt.상태 === "soldout") isSoldout = true; // 품절
+      }
     }
   }
-  let rowCopy = {...row};
 
-  // **여기만 수정**  
-  if ('재고수량' in rowCopy) {
-    // '재고수량'만 바꾼다!
-    rowCopy['재고수량'] = isSoldout ? 0 : (fillStock ? 99999 : rowCopy['재고수량']);
-  } else if ('재고' in rowCopy) {
-    // 만약 '재고' 컬럼이 이미 있으면 그것만 쓴다 (혹시라도)
-    rowCopy['재고'] = isSoldout ? 0 : (fillStock ? 99999 : rowCopy['재고']);
+  // 결과 반영
+  let rowCopy = { ...row };
+  if (isDiscont) {
+    rowCopy['관리코드'] = '단종';
+  }
+  if (isSoldout || isDiscont) {
+    rowCopy['재고수량'] = 0;
   } else {
-    // 둘 다 없으면 새로 '재고수량' 생성
-    rowCopy['재고수량'] = isSoldout ? 0 : (fillStock ? 99999 : '');
+    rowCopy['재고수량'] = fillStock ? 99999 : rowCopy['재고수량'];
   }
 
   return rowCopy;
 });
+
 
 
     let ws = XLSX.utils.json_to_sheet(newData);
