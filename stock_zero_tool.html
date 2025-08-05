@@ -5,6 +5,8 @@
   <title>관리코드별 색상/사이즈 품절툴</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <meta name="viewport" content="width=1200">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
   <style>
 body {
   font-family: 'Pretendard', 'Apple SD Gothic Neo', '맑은 고딕', sans-serif;
@@ -567,39 +569,58 @@ function updateSoldoutList() {
   if (!any) ul.innerHTML = `<li style="color:#b5b5b5;">(선택내역 없음)</li>`;
 }
 
-document.getElementById('downloadBtn').addEventListener('click', function() {
+document.getElementById('downloadBtn').addEventListener('click', async function() {
   let fillStock = document.getElementById('fillStockCheckbox').checked;
+  const zip = new JSZip();
+
   for (let {name, data} of fileDataArr) {
-    let newData = data.map(row=>{
-      let code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
-      let target = soldoutState[code];
-      let isSoldout = false;
-      if (target?.전체) isSoldout = true;
-      if (!isSoldout && (target?.복합||[]).length > 0) {
-        for (let opt of target.복합) {
-          let { color, size } = extractColorAndSize(row);
-          let matchColor = (!opt.색상 || (color == opt.색상));
-          let matchSize = (!opt.사이즈 || (size == opt.사이즈));
-          if (matchColor && matchSize) isSoldout = true;
-        }
-      }
-      let rowCopy = {...row};
-      let stockCol = '';
-      if ('재고수량' in rowCopy) stockCol = '재고수량';
-      else if ('재고' in rowCopy) stockCol = '재고';
-      else stockCol = '재고수량'; // 없으면 새로 만듦
+    let newData = data.map(row => {
+  let code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
+  let target = soldoutState[code];
+  let isSoldout = false;
+  if (target?.전체) isSoldout = true;
+  if (!isSoldout && (target?.복합||[]).length > 0) {
+    for (let opt of target.복합) {
+      let { color, size } = extractColorAndSize(row);
+      let matchColor = (!opt.색상 || (color == opt.색상));
+      let matchSize = (!opt.사이즈 || (size == opt.사이즈));
+      if (matchColor && matchSize) isSoldout = true;
+    }
+  }
+  let rowCopy = {...row};
 
-      if (isSoldout) rowCopy[stockCol] = 0;
-      else if (fillStock) rowCopy[stockCol] = 99999;
+  // **여기만 수정**  
+  if ('재고수량' in rowCopy) {
+    // '재고수량'만 바꾼다!
+    rowCopy['재고수량'] = isSoldout ? 0 : (fillStock ? 99999 : rowCopy['재고수량']);
+  } else if ('재고' in rowCopy) {
+    // 만약 '재고' 컬럼이 이미 있으면 그것만 쓴다 (혹시라도)
+    rowCopy['재고'] = isSoldout ? 0 : (fillStock ? 99999 : rowCopy['재고']);
+  } else {
+    // 둘 다 없으면 새로 '재고수량' 생성
+    rowCopy['재고수량'] = isSoldout ? 0 : (fillStock ? 99999 : '');
+  }
 
-      return rowCopy;
-    });
+  return rowCopy;
+});
+
+
     let ws = XLSX.utils.json_to_sheet(newData);
     let wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-    XLSX.writeFile(wb, name);
+
+    // 엑셀 파일을 바이너리(Blob)로 추출
+    let xlsBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    zip.file(name.endsWith('.xlsx') ? name : name.replace(/\.xls$/, '.xlsx'), xlsBlob);
   }
+
+  // ZIP 전체 다운로드
+  zip.generateAsync({ type: "blob" }).then(function (blob) {
+    // 파일명: "품절처리_일괄다운로드.zip"
+    saveAs(blob, "품절처리_일괄다운로드.zip");
+  });
 });
+
 
 function updateProdCount() {
   document.getElementById('prodCountInfo').textContent = uniqueCodes.length
