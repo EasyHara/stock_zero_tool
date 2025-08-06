@@ -258,6 +258,12 @@ body {
 }
 .code-btn.discont { background: #856ed9 !important; color: #fff !important; border-color: #533e8e; }
 
+#fileDropZone.dragover {
+  background: #c9e8de;
+  border-radius: 13px;
+  box-shadow: 0 0 0 3px #2ba87d7a;
+}
+
 @media (max-width: 1100px) {
   .container { flex-direction: column; max-width: 99vw; padding: 22px 3vw; }
   .main-area, .side-area { min-width: unset; width: unset; }
@@ -288,7 +294,7 @@ body {
         옵션 이름은 반드시 각 행의 ‘색상’, ‘사이즈’ 컬럼에 정확히 입력되어 있어야 합니다.
         </span>
       </div>
-      <div class="file-select-area">
+      <div class="file-select-area" id="fileDropZone">
         <label class="file-label">
           엑셀파일선택
           <input type="file" id="inputFiles" class="file-input" multiple accept=".xls,.xlsx">
@@ -298,6 +304,7 @@ body {
         <button class="switch-btn" id="toggleOptionModeBtn">색상,사이즈별 품절 OFF</button>
         <button class="reset-btn" id="resetBtn">초기화</button>
       </div>
+
       <div class="check-row">
         <label>
           <input type="checkbox" id="fillStockCheckbox" checked>
@@ -679,6 +686,31 @@ function updateProdCount() {
   document.getElementById('prodCountInfo').textContent = uniqueCodes.length
     ? `총 ${uniqueCodes.length}개 선택됨` : '';
 }
+
+const fileDropZone = document.getElementById('fileDropZone');
+
+// 파일 드롭 업로드
+fileDropZone.addEventListener('dragover', function(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  fileDropZone.classList.add('dragover');
+});
+
+fileDropZone.addEventListener('dragleave', function(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  fileDropZone.classList.remove('dragover');
+});
+
+fileDropZone.addEventListener('drop', function(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  fileDropZone.classList.remove('dragover');
+  const files = e.dataTransfer.files;
+  if (files.length) {
+    handleFiles(files);
+  }
+});
 
   </script>
 </body>
