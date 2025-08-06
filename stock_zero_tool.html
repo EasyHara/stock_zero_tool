@@ -651,19 +651,23 @@ else if (target?.전체 === "soldout") isSoldout = true;
 
   // 결과 반영
   let rowCopy = { ...row };
+      
   if (isDiscont) {
-  // 기존 관리코드가 있으면 '단종 기존관리코드'로 변경 (띄어쓰기 포함)
   let originCode = row['관리코드'] || row['상품코드'] || row['코드'] || '';
-  rowCopy['관리코드'] = '단종' + (originCode ? ' ' + originCode : '');
-}
-ldout || isDiscont) {
-    rowCopy['재고수량'] = 0;
-  } else {
-    rowCopy['재고수량'] = fillStock ? 99999 : rowCopy['재고수량'];
-  }
+  let discontCode = '단종' + (originCode ? ' ' + originCode : '');
 
-  return rowCopy;
-});
+  if (discontCode.length > 20) {
+    // 기존관리코드 부분에서만 띄워쓰기 삭제
+    let compactOrigin = originCode.replace(/\s+/g, '');
+    discontCode = '단종' + (compactOrigin ? ' ' + compactOrigin : '');
+    // 그래도 20자 넘으면 앞에서부터 20자만 사용
+    if (discontCode.length > 20) {
+      discontCode = discontCode.slice(0, 20);
+    }
+  }
+  rowCopy['관리코드'] = discontCode;
+}
+
 
 
 
