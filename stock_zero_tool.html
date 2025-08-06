@@ -634,57 +634,55 @@ document.getElementById('downloadBtn').addEventListener('click', async function(
   const zip = new JSZip();
 
   for (let {name, data} of fileDataArr) {
-    let newData = data.map(row => {
-  let code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
-  let target = soldoutState[code];
-  let isSoldout = false, isDiscont = false;
-if (target?.전체 === "discont") isDiscont = true;
-else if (target?.전체 === "soldout") isSoldout = true;
+  let newData = data.map(row => {
+    let code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
+    let target = soldoutState[code];
+    let isSoldout = false, isDiscont = false;
+    if (target?.전체 === "discont") isDiscont = true;
+    else if (target?.전체 === "soldout") isSoldout = true;
 
-
-  // 품절/단종 체크
-  if (!isSoldout && (target?.복합 || []).length > 0) {
-    for (let opt of target.복합) {
-      let { color, size } = extractColorAndSize(row);
-      let matchColor = (!opt.색상 || (color == opt.색상));
-      let matchSize = (!opt.사이즈 || (size == opt.사이즈));
-      if (matchColor && matchSize) {
-        if (opt.상태 === "discont") isDiscont = true; // 단종
-        if (opt.상태 === "soldout") isSoldout = true; // 품절
+    // 품절/단종 체크 (색상/사이즈별)
+    if (!isSoldout && (target?.복합 || []).length > 0) {
+      for (let opt of target.복합) {
+        let { color, size } = extractColorAndSize(row);
+        let matchColor = (!opt.색상 || (color == opt.색상));
+        let matchSize = (!opt.사이즈 || (size == opt.사이즈));
+        if (matchColor && matchSize) {
+          if (opt.상태 === "discont") isDiscont = true; // 단종
+          if (opt.상태 === "soldout") isSoldout = true; // 품절
+        }
       }
     }
-  }
 
-  // 결과 반영
-  let rowCopy = { ...row };
-      
-  if (isDiscont) {
-  let originCode = row['관리코드'] || row['상품코드'] || row['코드'] || '';
-  let discontCode = '단종' + (originCode ? ' ' + originCode : '');
+    // 결과 반영
+    let rowCopy = { ...row };
+    if (isDiscont) {
+      let originCode = row['관리코드'] || row['상품코드'] || row['코드'] || '';
+      let discontCode = '단종' + (originCode ? ' ' + originCode : '');
 
-  if (discontCode.length > 20) {
-    // 기존관리코드 부분에서만 띄워쓰기 삭제
-    let compactOrigin = originCode.replace(/\s+/g, '');
-    discontCode = '단종' + (compactOrigin ? ' ' + compactOrigin : '');
-    // 그래도 20자 넘으면 앞에서부터 20자만 사용
-    if (discontCode.length > 20) {
-      discontCode = discontCode.slice(0, 20);
+      if (discontCode.length > 20) {
+        // 기존관리코드 부분에서만 띄워쓰기 삭제
+        let compactOrigin = originCode.replace(/\s+/g, '');
+        discontCode = '단종' + (compactOrigin ? ' ' + compactOrigin : '');
+        // 그래도 20자 넘으면 앞에서부터 20자만 사용
+        if (discontCode.length > 20) {
+          discontCode = discontCode.slice(0, 20);
+        }
+      }
+      rowCopy['관리코드'] = discontCode;
     }
-  }
-  rowCopy['관리코드'] = discontCode;
+    return rowCopy; // 반드시 return!
+  });
+
+  let ws = XLSX.utils.json_to_sheet(newData);
+  let wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+  // 엑셀 파일을 바이너리(Blob)로 추출
+  let xlsBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  zip.file(name.endsWith('.xlsx') ? name : name.replace(/\.xls$/, '.xlsx'), xlsBlob);
 }
 
-
-
-
-    let ws = XLSX.utils.json_to_sheet(newData);
-    let wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-
-    // 엑셀 파일을 바이너리(Blob)로 추출
-    let xlsBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    zip.file(name.endsWith('.xlsx') ? name : name.replace(/\.xls$/, '.xlsx'), xlsBlob);
-  }
 
   // ZIP 전체 다운로드
   zip.generateAsync({ type: "blob" }).then(function (blob) {
