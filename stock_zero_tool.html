@@ -264,6 +264,19 @@ body {
 .code-btn[style*="box-shadow"] {
   outline: 2.5px solid #7ae8c8;
 }
+.switch-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  background: #f4f4f4;
+  cursor: pointer;
+  font-size: 14px;
+}
+.switch-btn.on {
+  background: #2b7365;
+  color: #fff;
+  border-color: #2b7365;
+}
 
 
 @media (max-width: 1100px) {
@@ -303,6 +316,10 @@ body {
         </label>
         <span id="fileNames" style="font-size:15px;max-width:360px;display:inline-block;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
         <span id="fileCount" style="font-size:14px;color:#1b8863;margin-left:7px;"></span>
+       <div id="modeSwitchGroup" style="display:flex; align-items:center; gap:6px; margin-left:8px;">
+        <button class="switch-btn on"  id="modeSoldoutBtn"  title="품절/단종 선택 모드">품절/단종 모드</button>
+        <button class="switch-btn"      id="modeEditBtn"     title="옵션 추가/삭제 모드">옵션 편집 모드</button>
+        </div>
         <button class="switch-btn" id="toggleOptionModeBtn">색상,사이즈별 품절 OFF</button>
         <button class="reset-btn" id="resetBtn">초기화</button>
       </div>
@@ -332,39 +349,47 @@ function toSafeId(str) {
 }
 
 function extractColorAndSize(row) {
-  let color = row['색상'] ? row['색상'].toString().trim() : '';
-  let size  = row['사이즈'] ? row['사이즈'].toString().trim() : '';
-  let base = row['제품선택'] || row['추가상품값'] || '';
+  let color = row['색상'] ? String(row['색상']).trim() : '';
+  let size  = row['사이즈'] ? String(row['사이즈']).trim() : '';
+  const base = (row['제품선택'] || row['추가상품값'] || '').toString().trim();
 
-  if (!color && base && base.includes('/')) {
-    let arr = base.split('/').map(x => x.trim());
-    color = arr[arr.length - 1];
-  }
+  const tokens = base ? base.split('/').map(s => s.trim()).filter(Boolean) : [];
+  const isSizeToken = v => /^(FREE|XS|S|M|L|XL|XXL|\d{2,3})$/i.test(v);
 
-  if (!size && base && base.includes('/')) {
-    let opts = [];
-    let spl = base.split('/').map(x => x.trim());
-    for (let v of spl) {
-      if (/^(FREE|S|M|L|XL|\d{2,3})$/i.test(v)) {
-        opts.push(v);
-      }
+  // 1) 사이즈가 비어 있으면 라벨에서 "마지막" 사이즈스러운 토큰을 사이즈로
+  if (!size && tokens.length) {
+    for (let i = tokens.length - 1; i >= 0; i--) {
+      if (isSizeToken(tokens[i])) { size = tokens[i]; break; }
     }
-    if (opts.length > 0) size = opts.find(x => !isNaN(x) || /^FREE|S|M|L|XL$/i.test(x)) || '';
   }
 
+  // 2) 색상이 비어 있으면
+  if (!color && tokens.length) {
+    if (size) {
+      // 라벨 안에서 size의 "마지막 등장 위치" 바로 앞 토큰을 색상으로
+      const up = tokens.map(t => t.toUpperCase());
+      let idx = -1;
+      for (let i = up.length - 1; i >= 0; i--) {
+        if (up[i] === size.toUpperCase()) { idx = i; break; }
+      }
+      if (idx > 0) color = tokens[idx - 1];
+    }
+    // 그래도 못 찾으면 마지막 토큰을 색상으로 추정
+    if (!color) color = tokens[tokens.length - 1];
+  }
+
+  // 방어: '58/60' 같은 값 들어오면 첫 토큰만 사용
   if (size && size.includes('/')) size = size.split('/')[0].trim();
 
-  // 여기가 중요!
-  console.log('[extractColorAndSize]', base, '→', 'color:', color, 'size:', size);
-
-  return {
-    color: color || '',
-    size: size || ''
-  };
+  return { color: color || '', size: size || '' };
 }
+
 
 let fileList = [], fileDataArr = [], allRows = [], uniqueCodes = [], soldoutState = {};
 let optionMode = false, selectedCode = null;
+
+// ▼ 모드 상태: 'soldout' | 'edit'
+let mode = 'soldout';
 
 document.getElementById('inputFiles').addEventListener('change', async function(e) { await handleFiles(e.target.files); });
 document.getElementById('resetBtn').addEventListener('click', resetAll);
@@ -376,6 +401,42 @@ document.getElementById('toggleOptionModeBtn').addEventListener('click', functio
   selectedCode = null;
   updateCodeBtns();
 });
+
+// 상단 모드 스위치 버튼
+const modeSoldoutBtn = document.getElementById('modeSoldoutBtn');
+const modeEditBtn    = document.getElementById('modeEditBtn');
+
+modeSoldoutBtn.addEventListener('click', () => {
+  if (mode === 'soldout') return;
+  mode = 'soldout';
+  modeSoldoutBtn.classList.add('on');
+  modeEditBtn.classList.remove('on');
+
+  // 필요하면 편집 모드에서 비활성화했던 토글 되살리기
+  const tBtn = document.getElementById('toggleOptionModeBtn');
+  tBtn.disabled = false; // 선택사항
+
+  selectedCode = null;
+  updateCodeBtns();
+});
+
+modeEditBtn.addEventListener('click', () => {
+  if (mode === 'edit') return;
+  mode = 'edit';
+  modeEditBtn.classList.add('on');
+  modeSoldoutBtn.classList.remove('on');
+
+  optionMode = true;
+  const tBtn = document.getElementById('toggleOptionModeBtn');
+  tBtn.classList.add('on');
+  tBtn.textContent = '색상,사이즈별 품절 ON';
+  tBtn.disabled = true; // 선택사항: 편집 모드에서는 토글 못 누르게
+
+  selectedCode = null;
+  updateCodeBtns();
+});
+
+
 
 function resetAll() {
   fileList = []; fileDataArr = []; allRows = []; uniqueCodes = []; soldoutState = {}; selectedCode = null;
@@ -494,19 +555,26 @@ if (soldoutState[code]?.전체 === "discont") {
     wrap.appendChild(btn);
 
     if (optionMode && selectedCode === code) {
-      let rows = allRows.filter(r => r.관리코드 === code);
-      let colorSet = new Set(), sizeSet = new Set();
-      rows.forEach(r => {
-        let { color, size } = extractColorAndSize(r);
-        if (color && color !== "") colorSet.add(color);
-        if (size && size !== "") sizeSet.add(size);
-      });
-      let colors = Array.from(colorSet).filter(x => x !== "");
-      let sizes = Array.from(sizeSet).filter(x => x !== "");
-      if (colors.length > 0 || sizes.length > 0) {
-        showOptionSelect(code, wrap, colors, sizes);
-      }
+  let rows = allRows.filter(r => r.관리코드 === code);
+  let colorSet = new Set(), sizeSet = new Set();
+  rows.forEach(r => {
+    let { color, size } = extractColorAndSize(r);
+    if (color && color !== "") colorSet.add(color);
+    if (size && size !== "") sizeSet.add(size);
+  });
+  let colors = Array.from(colorSet).filter(x => x !== "");
+  let sizes  = Array.from(sizeSet).filter(x => x !== "");
+
+  if (mode === 'soldout') {
+    if (colors.length > 0 || sizes.length > 0) {
+      showOptionSelect(code, wrap, colors, sizes); // 기존 품절/단종 팝업
     }
+  } else {
+    // 옵션 편집 모드 팝업 (플레이스홀더/기본 뼈대)
+    showOptionSelectForEdit(code, wrap, colors, sizes);
+  }
+}
+
     area.appendChild(wrap);
   }
   document.body.onclick = function() {
@@ -691,36 +759,35 @@ document.getElementById('downloadBtn').addEventListener('click', async function(
   const zip = new JSZip();
 
   // 1. 관리코드별 옵션 현황 계산
-  let codeOptionCount = {};
-  for (let {data} of fileDataArr) {
-    for (let row of data) {
-      let code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
-      if (!code) continue;
-      codeOptionCount[code] = codeOptionCount[code] || { total: 0, soldout: 0, discont: 0 };
-      codeOptionCount[code].total += 1;
+  // allRows를 바로 사용
+let codeOptionCount = {};
+for (let row of allRows) {
+  let code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
+  if (!code) continue;
+  codeOptionCount[code] = codeOptionCount[code] || { total: 0, soldout: 0, discont: 0 };
+  codeOptionCount[code].total += 1;
 
-      let target = soldoutState[code];
-      let isSoldout = false, isDiscont = false;
+  let target = soldoutState[code];
+  let isSoldout = false, isDiscont = false;
 
-      // 복합옵션별 체크 (항상!)
-      if ((target?.복합 || []).length > 0) {
-        let { color, size } = extractColorAndSize(row);
-        for (let opt of target.복합) {
-          let matchColor = (!opt.색상 || (color == opt.색상));
-          let matchSize = (!opt.사이즈 || (size == opt.사이즈));
-          if (matchColor && matchSize) {
-            if (opt.상태 === "discont") isDiscont = true;
-            if (opt.상태 === "soldout") isSoldout = true;
-          }
-        }
+  if ((target?.복합 || []).length > 0) {
+    let { color, size } = extractColorAndSize(row);
+    for (let opt of target.복합) {
+      let matchColor = (!opt.색상 || (color == opt.색상));
+      let matchSize = (!opt.사이즈 || (size == opt.사이즈));
+      if (matchColor && matchSize) {
+        if (opt.상태 === "discont") isDiscont = true;
+        if (opt.상태 === "soldout") isSoldout = true;
       }
-      if (target?.전체 === "discont") isDiscont = true;
-      else if (target?.전체 === "soldout") isSoldout = true;
-
-      if (isDiscont) codeOptionCount[code].discont += 1;
-      else if (isSoldout) codeOptionCount[code].soldout += 1;
     }
   }
+  if (target?.전체 === "discont") isDiscont = true;
+  else if (target?.전체 === "soldout") isSoldout = true;
+
+  if (isDiscont) codeOptionCount[code].discont += 1;
+  else if (isSoldout) codeOptionCount[code].soldout += 1;
+}
+
 
   // 2. 옵션 전부가 품절/단종이면 관리코드 전체에 자동 반영
   for (let code in codeOptionCount) {
@@ -738,16 +805,26 @@ document.getElementById('downloadBtn').addEventListener('click', async function(
   }
 
   // 3. 엑셀 데이터 가공 및 zip파일로 저장
-for (let {name, data} of fileDataArr) {
-  let newData = data.map(row => {
+// 1) allRows를 파일명으로 그룹핑
+const rowsByFile = {};
+for (let r of allRows) {
+  const fname = r.file || '편집추가.xlsx'; // 파일명 없으면 기본 이름
+  if (!rowsByFile[fname]) rowsByFile[fname] = [];
+  rowsByFile[fname].push(r);
+}
+
+// 2) 각 파일별로 가공해서 xlsx 생성
+for (let name in rowsByFile) {
+  const data = rowsByFile[name];
+
+  const newData = data.map(row => {
     let code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
     let target = soldoutState[code];
     let isSoldout = false, isDiscont = false;
 
-    // 복합옵션별 체크 (항상!)
     if ((target?.복합 || []).length > 0) {
+      let { color, size } = extractColorAndSize(row);
       for (let opt of target.복합) {
-        let { color, size } = extractColorAndSize(row);
         let matchColor = (!opt.색상 || (color == opt.색상));
         let matchSize = (!opt.사이즈 || (size == opt.사이즈));
         if (matchColor && matchSize) {
@@ -761,11 +838,10 @@ for (let {name, data} of fileDataArr) {
 
     let rowCopy = { ...row };
 
-    // [단종] 관리코드 문자열 처리(여러번 단종 붙는 것 1회만!)
     if (isDiscont) {
       let originCode = row['관리코드'] || row['상품코드'] || row['코드'] || '';
-      let discontCode = originCode.replace(/^(단종\s*)+/g, ''); // 앞쪽 단종 모두 제거
-      discontCode = '단종 ' + discontCode.trim(); // 하나만 붙임
+      let discontCode = originCode.replace(/^(단종\s*)+/g, '');
+      discontCode = '단종 ' + discontCode.trim();
       if (discontCode.length > 20) {
         let compactOrigin = discontCode.replace(/\s+/g, '');
         discontCode = '단종' + compactOrigin.slice(2);
@@ -773,29 +849,32 @@ for (let {name, data} of fileDataArr) {
       }
       rowCopy['관리코드'] = discontCode;
       rowCopy['재고수량'] = 0;
-    }
-    // [품절]
-    else if (isSoldout || (row['관리코드']||'').trim().startsWith('단종')) {
+    } else if (isSoldout || (row['관리코드']||'').trim().startsWith('단종')) {
       if ((row['관리코드']||'').trim().startsWith('단종')) {
         let cleanCode = row['관리코드'].replace(/^(단종\s*)+/g, '');
         rowCopy['관리코드'] = '단종 ' + cleanCode.trim();
       }
       rowCopy['재고수량'] = 0;
-    }
-    // [기타]
-    else if (fillStock && (!rowCopy['재고수량'] || rowCopy['재고수량'] == 0)) {
-      rowCopy['재고수량'] = 99999;
-    }
+} else {
+  // 품절/단종이 아닌 모든 경우: 체크가 켜져 있으면 재고수량 99999로 강제 설정
+  if (fillStock) {
+    rowCopy['재고수량'] = 99999;
+  }
+}
 
+
+    // 내부용 'file' 컬럼은 엑셀에 안 나가게 제거
+    delete rowCopy.file;
     return rowCopy;
   });
 
-    let ws = XLSX.utils.json_to_sheet(newData);
-    let wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-    let xlsBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    zip.file(name.endsWith('.xlsx') ? name : name.replace(/\.xls$/, '.xlsx'), xlsBlob);
-  }
+  const ws = XLSX.utils.json_to_sheet(newData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+  const xlsBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+  zip.file(name.endsWith('.xlsx') ? name : name.replace(/\.xls$/, '.xlsx'), xlsBlob);
+}
+
 
   zip.generateAsync({ type: "blob" }).then(function (blob) {
     saveAs(blob, "품절처리_일괄다운로드.zip");
@@ -878,6 +957,240 @@ function hideOptionSelect(code) {
   if (box) box.remove();
   selectedCode = null;
   updateCodeBtns();
+}
+
+function showOptionSelectForEdit(code, wrapElem, colors, sizes) {
+  // 같은 코드의 기존 편집 팝업 제거
+  Array.from(wrapElem.querySelectorAll('.option-select-area.popup')).forEach(el => el.remove());
+
+  // 해당 코드의 첫 행(템플릿)로 사이즈 컬럼 존재 여부 파악
+  const template = allRows.find(r => r.관리코드 === code) || {};
+  const hasSizeCol = Object.prototype.hasOwnProperty.call(template, '사이즈');
+
+  // 팝업 DOM 생성
+  const box = document.createElement('div');
+  box.id = 'editOptionBox_' + toSafeId(code);
+  box.className = 'option-select-area popup';
+  box.style.minWidth = '380px';
+  box.innerHTML = `
+    <div style="margin-bottom:8px;font-weight:600;font-size:14px;color:#2b7365">
+      옵션 편집 모드 – <span style="color:#146f58">${code}</span>
+    </div>
+
+    <!-- 신규 옵션 추가 -->
+    <div style="padding:8px;border:1px solid #cfe3d8;border-radius:8px;margin-bottom:10px;">
+      <div style="font-size:12px;color:#547a6b;margin-bottom:6px;">새 옵션 추가</div>
+
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        <input type="text" id="newColor_${code}" placeholder="색상" style="flex:1;padding:4px;font-size:12px;">
+        <input type="text" id="newSize_${code}" placeholder="${hasSizeCol ? '사이즈' : '사이즈 열 없음'}"
+               ${hasSizeCol ? '' : 'disabled'} style="flex:1;padding:4px;font-size:12px;">
+      </div>
+
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <input type="number" id="newStock_${code}" placeholder="재고수량(기본: 99999)"
+               value="99999" style="flex:1;padding:4px;font-size:12px;">
+      </div>
+
+      <button id="addBtn_${code}"
+        style="width:100%;padding:6px;font-size:13px;background:#2b7365;color:#fff;border:none;border-radius:4px;cursor:pointer;">
+        + 추가
+      </button>
+
+      <div style="margin-top:6px;font-size:11px;color:#7a8d84;line-height:1.4;">
+        • 색상만 입력하면 &rarr; 해당 코드의 <b>모든 기존 사이즈</b>로 일괄 추가<br>
+        • 사이즈만 입력하면 &rarr; 해당 코드의 <b>모든 기존 색상</b>으로 일괄 추가<br>
+        • 색상+사이즈를 모두 입력하면 &rarr; 해당 조합 1개 추가/갱신<br>
+        • 재고수량 미입력 시 기본 99999 적용
+      </div>
+    </div>
+
+    <!-- 기존 옵션 목록 -->
+    <div style="font-size:12px;color:#547a6b;margin-bottom:4px;">현재 옵션 목록</div>
+    <div id="optionList_${code}" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow:auto;">
+      ${renderOptionListHTML(code)}
+    </div>
+
+    <button class="option-soldout-area" style="width:100%;margin-top:8px;"
+            onclick="event.stopPropagation();hideOptionSelect('${code}')">닫기</button>
+  `;
+
+  wrapElem.appendChild(box);
+  box.onclick = (e) => e.stopPropagation();
+
+  // 추가 버튼 이벤트 (전역의 addNewOption을 사용)
+  const addBtn = box.querySelector(`#addBtn_${cssEscapeId(code)}`) || box.querySelector(`#addBtn_${code}`);
+  if (addBtn) {
+    addBtn.onclick = (e) => {
+      e.stopPropagation();
+      addNewOption(code);
+      // 목록 즉시 갱신 (addNewOption 내부에서도 갱신하지만 안전하게 한 번 더)
+      const listEl = document.getElementById(`optionList_${code}`);
+      if (listEl) listEl.innerHTML = renderOptionListHTML(code);
+    };
+  }
+}
+
+// 내부에서 id 선택 시 특수문자 이슈를 줄이기 위한 보조 함수 (안전하지 않은 코드값 대비)
+function cssEscapeId(raw) {
+  // 간단 escape: 공백/특수문자 -> 백슬래시 이스케이프
+  return String(raw).replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g, '\\$1');
+}
+
+
+function renderOptionListHTML(code) {
+  const rows = allRows.filter(r => r.관리코드 === code);
+  if (!rows.length) return `<div style="font-size:12px;color:#aaa;">(옵션 없음)</div>`;
+
+  // color||size 키로 유니크 처리
+  const seen = new Set();
+  const items = [];
+  for (const r of rows) {
+    const { color, size } = extractColorAndSize(r);
+    const key = `${color||''}||${size||''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    items.push({
+      color: color || '-',
+      size:  size  || '-',
+      stock: r['재고수량'] ?? 0
+    });
+  }
+
+  return items.map(it => `
+    <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #ddd;padding:4px 6px;border-radius:4px;">
+      <span style="font-size:12px;">${it.color} / ${it.size}</span>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <span style="font-size:11px;color:#666;">재고: ${it.stock}</span>
+        <button style="background:#ff5c5c;color:#fff;border:none;padding:2px 6px;border-radius:3px;font-size:11px;cursor:pointer;"
+          onclick="removeOption('${code}','${it.color === '-' ? '' : it.color}','${it.size === '-' ? '' : it.size}')">−</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+
+function removeOption(code, color, size) {
+  allRows = allRows.filter(r => {
+    const cs = extractColorAndSize(r);
+    return !(r.관리코드 === code && (cs.color || '') === color && (cs.size || '') === size);
+  });
+
+  document.getElementById(`optionList_${code}`).innerHTML = renderOptionListHTML(code);
+}
+function getSizesByCode(code) {
+  const set = new Set();
+  allRows
+    .filter(r => r.관리코드 === code)
+    .forEach(r => {
+      const { size } = extractColorAndSize(r);
+      if (size) set.add(size.trim());
+    });
+  return Array.from(set);
+}
+// 해당 관리코드의 "기존 색상" 목록을 중복 없이 반환
+function getColorsByCode(code) {
+  const set = new Set();
+  allRows
+    .filter(r => r.관리코드 === code)
+    .forEach(r => {
+      const { color } = extractColorAndSize(r);
+      if (color) set.add(color.trim());
+    });
+  return Array.from(set);
+}
+// 라벨(제품선택/추가상품값)에서 끝의 [사이즈]와 [색상]을 지우고 새 색상만 붙임
+function buildProductTextFromTemplateForCode(code, tplRow, newColor) {
+  const raw = (tplRow['제품선택'] || tplRow['추가상품값'] || '').toString();
+  const tokens = raw.split('/').map(s => s.trim()).filter(Boolean);
+
+  const isSize = v => /^(FREE|XS|S|M|L|XL|XXL|\d{2,3})$/i.test(v);
+  const colorSet = new Set(getColorsByCode(code).map(c => c.toUpperCase()));
+
+  // 1) 끝이 사이즈면 제거
+  if (tokens.length && isSize(tokens[tokens.length - 1])) tokens.pop();
+  // 2) 끝이 '이 코드에서 쓰는 색상'이면 제거
+  if (tokens.length && colorSet.has(tokens[tokens.length - 1].toUpperCase())) tokens.pop();
+
+  tokens.push(newColor);
+  return tokens.join(' / ');
+}
+
+
+// 보조: 뒤에서부터 조건에 맞는 인덱스 찾기
+function findLastIndex(arr, pred){
+  for (let i = arr.length - 1; i >= 0; i--) if (pred(arr[i], i, arr)) return i;
+  return -1;
+}
+
+function addNewOption(code) {
+  const colorInput = document.getElementById(`newColor_${code}`).value.trim();
+  const sizeInput  = document.getElementById(`newSize_${code}`)?.value.trim() || '';
+  const stock      = parseInt(document.getElementById(`newStock_${code}`).value.trim(), 10) || 99999;
+
+  if (!colorInput && !sizeInput) { alert("색상 또는 사이즈 중 최소 하나는 입력하세요."); return; }
+
+  const template = allRows.find(r => r.관리코드 === code);
+  if (!template) { alert("추가할 기준 행을 찾을 수 없습니다."); return; }
+
+  const hasSizeCol = Object.prototype.hasOwnProperty.call(template, '사이즈');
+  const colorsToUse = colorInput ? [colorInput] : (getColorsByCode(code).length ? getColorsByCode(code) : ['']);
+  const sizesToUse  = hasSizeCol ? (sizeInput ? [sizeInput] : (getSizesByCode(code).length ? getSizesByCode(code) : [''])) : [''];
+
+  const buildLabel = col => buildProductTextFromTemplateForCode(code, template, col);
+
+
+  colorsToUse.forEach(col => {
+    sizesToUse.forEach(sz => {
+      const existIdx = allRows.findIndex(r => {
+        if (r.관리코드 !== code) return false;
+        const cs = extractColorAndSize(r);
+        return (cs.color || '') === (col || '') && (cs.size || '') === (sz || '');
+      });
+
+      if (existIdx >= 0) {
+        // 기존 조합 업데이트
+        const row = allRows[existIdx];
+        row['재고수량'] = stock;
+        if ('색상' in row)   row['색상']   = col || '';
+        if ('사이즈' in row) row['사이즈'] = sz  || '';
+        if ('제품선택'   in row) row['제품선택']   = buildLabel(col); // 라벨엔 사이즈 넣지 않음
+        if ('추가상품값' in row) row['추가상품값'] = buildLabel(col);
+      } else {
+        // 새 조합 추가 → 같은 파일·같은 관리코드 블록 끝에 끼워넣기
+        const newRow = { ...template };
+        newRow['관리코드'] = code;
+        if ('상품코드' in newRow) newRow['상품코드'] = code;
+        if ('코드'     in newRow) newRow['코드']     = code;
+        if ('색상'   in newRow) newRow['색상']   = col || '';
+        if ('사이즈' in newRow) newRow['사이즈'] = sz  || '';
+        newRow['재고수량'] = stock;
+        if ('제품선택'   in newRow) newRow['제품선택']   = buildLabel(col);
+        if ('추가상품값' in newRow) newRow['추가상품값'] = buildLabel(col);
+        newRow.file = template.file;
+
+        const lastIdx = findLastIndex(allRows, r => r.file === template.file && r.관리코드 === code);
+        if (lastIdx >= 0) allRows.splice(lastIdx + 1, 0, newRow);
+        else allRows.push(newRow);
+      }
+    });
+  });
+
+  // UI 갱신
+  document.getElementById(`optionList_${code}`).innerHTML = renderOptionListHTML(code);
+  document.getElementById(`newColor_${code}`).value = '';
+  const szEl = document.getElementById(`newSize_${code}`); if (szEl) szEl.value = '';
+  document.getElementById(`newStock_${code}`).value = '';
+
+  // 품절/단종 팝업에도 바로 반영되길 원하면 활성화
+  updateCodeBtns();
+}
+
+
+// 코드에 '사이즈' 열이 있는지 확인
+function hasSizeColumnForCode(code) {
+  const tpl = allRows.find(r => r.관리코드 === code) || {};
+  return Object.prototype.hasOwnProperty.call(tpl, '사이즈');
 }
 
   </script>
