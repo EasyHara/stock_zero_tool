@@ -818,52 +818,44 @@ for (let name in rowsByFile) {
   const data = rowsByFile[name];
 
   const newData = data.map(row => {
-    let code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
-    let target = soldoutState[code];
+    // 어떤 컬럼이 실제 코드 컬럼인지 먼저 찾기
+    const codeKey = getCodeKey(row);
+    const code = codeKey ? row[codeKey] : '';
+
+    const target = soldoutState[code];
     let isSoldout = false, isDiscont = false;
 
     if ((target?.복합 || []).length > 0) {
-      let { color, size } = extractColorAndSize(row);
-      for (let opt of target.복합) {
-        let matchColor = (!opt.색상 || (color == opt.색상));
-        let matchSize = (!opt.사이즈 || (size == opt.사이즈));
+      const { color, size } = extractColorAndSize(row);
+      for (const opt of target.복합) {
+        const matchColor = (!opt.색상 || color === opt.색상);
+        const matchSize  = (!opt.사이즈 || size  === opt.사이즈);
         if (matchColor && matchSize) {
-          if (opt.상태 === "discont") isDiscont = true;
-          if (opt.상태 === "soldout") isSoldout = true;
+          if (opt.상태 === 'discont') isDiscont = true;
+          if (opt.상태 === 'soldout') isSoldout = true;
         }
       }
     }
-    if (target?.전체 === "discont") isDiscont = true;
-    else if (target?.전체 === "soldout") isSoldout = true;
+    if (target?.전체 === 'discont') isDiscont = true;
+    else if (target?.전체 === 'soldout') isSoldout = true;
 
-    let rowCopy = { ...row };
+    const rowCopy = { ...row };
 
     if (isDiscont) {
-      let originCode = row['관리코드'] || row['상품코드'] || row['코드'] || '';
-      let discontCode = originCode.replace(/^(단종\s*)+/g, '');
-      discontCode = '단종 ' + discontCode.trim();
-      if (discontCode.length > 20) {
-        let compactOrigin = discontCode.replace(/\s+/g, '');
-        discontCode = '단종' + compactOrigin.slice(2);
-        if (discontCode.length > 20) discontCode = discontCode.slice(0, 20);
-      }
-      rowCopy['관리코드'] = discontCode;
+      // 관리코드/상품코드/코드 중 실제 있는 컬럼에 프리픽스 적용
+      if (codeKey) rowCopy[codeKey] = makeDiscontCode(rowCopy[codeKey]);
       rowCopy['재고수량'] = 0;
-    } else if (isSoldout || (row['관리코드']||'').trim().startsWith('단종')) {
-      if ((row['관리코드']||'').trim().startsWith('단종')) {
-        let cleanCode = row['관리코드'].replace(/^(단종\s*)+/g, '');
-        rowCopy['관리코드'] = '단종 ' + cleanCode.trim();
+    } else if (isSoldout || (String(code || '').trim().startsWith('단종'))) {
+      // 이미 단종으로 시작하는 코드도 재정리
+      if (String(code || '').trim().startsWith('단종') && codeKey) {
+        rowCopy[codeKey] = makeDiscontCode(rowCopy[codeKey]);
       }
       rowCopy['재고수량'] = 0;
-} else {
-  // 품절/단종이 아닌 모든 경우: 체크가 켜져 있으면 재고수량 99999로 강제 설정
-  if (fillStock) {
-    rowCopy['재고수량'] = 99999;
-  }
-}
+    } else if (fillStock && (!rowCopy['재고수량'] || rowCopy['재고수량'] == 0)) {
+      // 품절/단종 외 재고는 99999
+      rowCopy['재고수량'] = 99999;
+    }
 
-
-    // 내부용 'file' 컬럼은 엑셀에 안 나가게 제거
     delete rowCopy.file;
     return rowCopy;
   });
@@ -874,6 +866,7 @@ for (let name in rowsByFile) {
   const xlsBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
   zip.file(name.endsWith('.xlsx') ? name : name.replace(/\.xls$/, '.xlsx'), xlsBlob);
 }
+
 
 
   zip.generateAsync({ type: "blob" }).then(function (blob) {
@@ -1078,6 +1071,47 @@ function removeOption(code, color, size) {
 
   document.getElementById(`optionList_${code}`).innerHTML = renderOptionListHTML(code);
 }
+
+
+// 템플릿 라벨의 끝 "색상/사이즈" 토큰을 지우고 새 색상만 붙이는 함수
+function buildProductTextFromTemplate(tplRow, newColor) {
+  const raw = (tplRow['제품선택'] || tplRow['추가상품값'] || '').toString();
+  const tokens = raw.split('/').map(s => s.trim()).filter(Boolean);
+  if (!tokens.length) return newColor || '';
+
+  // 컬럼값이 비어있을 때를 대비해 라벨에서 추정
+  const guess = extractColorAndSize(tplRow);
+  const tplColor = (tplRow['색상']  || guess.color || '').toString().trim();
+  const tplSize  = (tplRow['사이즈']|| guess.size  || '').toString().trim();
+
+  const isSizeToken = v => /^(FREE|XS|S|M|L|XL|XXL|\d{2,3})$/i.test(v);
+  const eq = (a,b) => a && b && a.toUpperCase() === b.toUpperCase();
+
+  let cut = tokens.length;
+  const last = tokens[cut - 1];
+  const prev = tokens[cut - 2];
+
+  // … / (색상) / (사이즈)
+  if (cut >= 2 && (eq(last, tplSize) || isSizeToken(last)) && eq(prev, tplColor)) {
+    cut -= 2;
+  // … / (색상)
+  } else if (cut >= 1 && eq(last, tplColor)) {
+    cut -= 1;
+  // … / (사이즈) 만
+  } else if (cut >= 1 && isSizeToken(last)) {
+    cut -= 1;
+  }
+
+  // 추가 방어: 잘라낸 뒤에도 끝이 기존 색상이면 한 번 더 제거
+  let prefix = tokens.slice(0, cut);
+  if (prefix.length && eq(prefix[prefix.length - 1], tplColor)) {
+    prefix = prefix.slice(0, -1);
+  }
+
+  // 라벨에는 새 "색상"만 붙임 (사이즈는 컬럼에 존재하므로 라벨에 중복 금지)
+  return [...prefix, (newColor || tplColor)].filter(Boolean).join(' / ');
+}
+
 function getSizesByCode(code) {
   const set = new Set();
   allRows
@@ -1116,6 +1150,25 @@ function buildProductTextFromTemplateForCode(code, tplRow, newColor) {
   return tokens.join(' / ');
 }
 
+// 행 안에서 실제 코드 컬럼 키 찾기(관리코드/상품코드/코드 중 존재하는 것)
+function getCodeKey(row) {
+  const norm = s => String(s).replace(/\s/g, '').toLowerCase();
+  const keys = Object.keys(row || {});
+  const find = want => keys.find(k => norm(k) === norm(want));
+  return find('관리코드') || find('상품코드') || find('코드') || null;
+}
+
+// '단종 ' 프리픽스 만들기(중복 방지 + 20자 제한 유지)
+function makeDiscontCode(origin) {
+  let base = String(origin || '').replace(/^(단종\s*)+/g, '').trim();
+  let out = '단종 ' + base;
+  if (out.length > 20) {
+    const compact = out.replace(/\s+/g, '');
+    out = '단종' + compact.slice(2);
+    if (out.length > 20) out = out.slice(0, 20);
+  }
+  return out;
+}
 
 // 보조: 뒤에서부터 조건에 맞는 인덱스 찾기
 function findLastIndex(arr, pred){
@@ -1191,6 +1244,116 @@ function addNewOption(code) {
 function hasSizeColumnForCode(code) {
   const tpl = allRows.find(r => r.관리코드 === code) || {};
   return Object.prototype.hasOwnProperty.call(tpl, '사이즈');
+}
+// 파일별 유니크 사이즈
+function getSizesByCodeInFile(code, file) {
+  const set = new Set();
+  allRows
+    .filter(r => r.관리코드 === code && r.file === file)
+    .forEach(r => {
+      const { size } = extractColorAndSize(r);
+      if (size) set.add(size.trim());
+    });
+  return Array.from(set);
+}
+
+// 파일별 유니크 색상
+function getColorsByCodeInFile(code, file) {
+  const set = new Set();
+  allRows
+    .filter(r => r.관리코드 === code && r.file === file)
+    .forEach(r => {
+      const { color } = extractColorAndSize(r);
+      if (color) set.add(color.trim());
+    });
+  return Array.from(set);
+}
+
+// 뒤에서부터 조건 인덱스 찾기(이미 있다면 사용 중이면 생략해도 됨)
+function findLastIndex(arr, pred){
+  for (let i = arr.length - 1; i >= 0; i--) if (pred(arr[i], i, arr)) return i;
+  return -1;
+}
+
+// ★ 교체본: 모든 '파일별 관리코드 블록'에 옵션 추가
+function addNewOption(code) {
+  const colorInput = document.getElementById(`newColor_${code}`).value.trim();
+  const sizeInput  = document.getElementById(`newSize_${code}`)?.value.trim() || '';
+  const stock      = parseInt(document.getElementById(`newStock_${code}`).value.trim(), 10) || 99999;
+
+  if (!colorInput && !sizeInput) {
+    alert("색상 또는 사이즈 중 최소 하나는 입력하세요.");
+    return;
+  }
+
+  // 이 관리코드가 존재하는 파일 목록
+  const filesForCode = Array.from(new Set(
+    allRows.filter(r => r.관리코드 === code).map(r => r.file)
+  ));
+
+  filesForCode.forEach(fileName => {
+    const template = allRows.find(r => r.관리코드 === code && r.file === fileName);
+    if (!template) return;
+
+    const hasSizeCol = Object.prototype.hasOwnProperty.call(template, '사이즈');
+
+    // 파일별 기본 색상/사이즈 세트
+    const colorsToUse = colorInput
+      ? [colorInput]
+      : (getColorsByCodeInFile(code, fileName).length ? getColorsByCodeInFile(code, fileName) : ['']);
+
+    const sizesToUse  = hasSizeCol
+      ? (sizeInput ? [sizeInput]
+                   : (getSizesByCodeInFile(code, fileName).length ? getSizesByCodeInFile(code, fileName) : ['']))
+      : ['']; // 사이즈 열이 없으면 공란 하나만
+
+    const buildLabel = col => buildProductTextFromTemplate(template, col); // 기존 함수 재사용(색상만 라벨에 반영)
+
+    colorsToUse.forEach(col => {
+      sizesToUse.forEach(sz => {
+        // 해당 파일+코드 블록 내에 동일 조합 있는지 검사
+        const existIdx = allRows.findIndex(r => {
+          if (r.file !== fileName || r.관리코드 !== code) return false;
+          const cs = extractColorAndSize(r);
+          return (cs.color || '') === (col || '') && (cs.size || '') === (sz || '');
+        });
+
+        if (existIdx >= 0) {
+          // 기존 조합: 재고/필드 갱신
+          const row = allRows[existIdx];
+          row['재고수량'] = stock;
+          if ('색상' in row)   row['색상']   = col || '';
+          if ('사이즈' in row) row['사이즈'] = sz  || '';
+          if ('제품선택'   in row) row['제품선택']   = buildLabel(col);
+          if ('추가상품값' in row) row['추가상품값'] = buildLabel(col);
+        } else {
+          // 새 조합: 해당 파일의 관리코드 블록 끝에 끼워넣기
+          const newRow = { ...template };
+          newRow['관리코드'] = code;
+          if ('상품코드' in newRow) newRow['상품코드'] = code;
+          if ('코드'     in newRow) newRow['코드']     = code;
+          if ('색상'   in newRow)   newRow['색상']   = col || '';
+          if ('사이즈' in newRow)   newRow['사이즈'] = sz  || '';
+          newRow['재고수량'] = stock;
+          if ('제품선택'   in newRow) newRow['제품선택']   = buildLabel(col);
+          if ('추가상품값' in newRow) newRow['추가상품값'] = buildLabel(col);
+          newRow.file = fileName;
+
+          const lastIdx = findLastIndex(allRows, r => r.file === fileName && r.관리코드 === code);
+          if (lastIdx >= 0) allRows.splice(lastIdx + 1, 0, newRow);
+          else allRows.push(newRow);
+        }
+      });
+    });
+  });
+
+  // UI 리프레시
+  const listEl = document.getElementById(`optionList_${code}`);
+  if (listEl) listEl.innerHTML = renderOptionListHTML(code);
+  document.getElementById(`newColor_${code}`).value = '';
+  const szEl = document.getElementById(`newSize_${code}`); if (szEl) szEl.value = '';
+  document.getElementById(`newStock_${code}`).value = '';
+  updateCodeBtns();
 }
 
   </script>
