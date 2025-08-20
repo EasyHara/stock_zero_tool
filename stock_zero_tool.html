@@ -1152,6 +1152,7 @@ document.getElementById('downloadBtn').addEventListener('click', async function 
       }
 
       delete rowCopy.file;
+      delete rowCopy._normCode;   // ← 이 줄 추가!
       return rowCopy;
     });
 
