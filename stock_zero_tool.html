@@ -889,13 +889,21 @@ function showOptionSelect(code, wrapElem, colors, sizes) {
   let box = document.createElement('div');
   box.id = 'optionBox_' + toSafeId(code);
   box.className = 'option-select-area popup';
-  box.innerHTML = `
+box.innerHTML = `
     <div style="margin-bottom:5px;font-weight:500;font-size:13.3px;color:#2b7365">
       품절로 처리할 색상/사이즈 옵션을 선택하세요.
     </div>
+
+    <button class="reset-btn"
+            style="width:100%;margin-bottom:8px;"
+            onclick="event.stopPropagation(); deleteCodeRows('${code}')">
+      이 관리코드 행 전체 삭제
+    </button>
+
     <div id="optionBtnArea_${toSafeId(code)}"></div>
     <button class="option-soldout-area" style="width:100%;" onclick="event.stopPropagation();hideOptionSelect('${code}')">닫기</button>
-  `;
+`;
+
   setTimeout(() => {
 
     let optArea = box.querySelector('#optionBtnArea_' + toSafeId(code));
@@ -1049,11 +1057,11 @@ function updateSoldoutList() {
 
 
 document.getElementById('downloadBtn').addEventListener('click', async function () {
-  // 1) 검증 요약 표시
+  // 1) 검증 요약
   const report = buildValidationReport();
   const msg = formatValidationSummary(report);
   if (report.totals.issues > 0) {
-    if (!confirm(msg)) return; // 사용자가 취소하면 중단
+    if (!confirm(msg)) return;
   }
 
   // 2) 준비
@@ -1062,7 +1070,8 @@ document.getElementById('downloadBtn').addEventListener('click', async function 
     alert('JSZip 로드에 실패했습니다. 인터넷 연결/스크립트 경로를 확인하세요.');
     return;
   }
-  const zip = new JSZip();
+  const mainZip = new JSZip();
+
 
   // 3) 관리코드별 옵션 현황 계산
   const codeOptionCount = {};
@@ -1108,8 +1117,10 @@ document.getElementById('downloadBtn').addEventListener('click', async function 
       }
     }
   }
+// 4.9) 최종 파일 생성 전에 순번 재정렬/재채번
+  renumberAllFiles();
 
-  // 5) 파일별로 시트 생성해서 ZIP에 담기
+ // 5) 파일별로 시트 생성해서 ZIP에 담기
   const rowsByFile = {};
   for (const r of allRows) {
     const fname = r.file || '편집추가.xlsx';
@@ -1152,7 +1163,7 @@ document.getElementById('downloadBtn').addEventListener('click', async function 
       }
 
       delete rowCopy.file;
-      delete rowCopy._normCode;   // ← 이 줄 추가!
+      delete rowCopy._normCode;
       return rowCopy;
     });
 
@@ -1162,14 +1173,13 @@ document.getElementById('downloadBtn').addEventListener('click', async function 
     const xlsBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
 
     const outName = name.endsWith('.xlsx') ? name : name.replace(/\.xls$/i, '.xlsx');
-    zip.file(outName, xlsBlob);
+    mainZip.file(outName, xlsBlob);
   }
 
   // 6) ZIP 다운로드
-  const blob = await zip.generateAsync({ type: 'blob' });
-  saveAs(blob, '품절처리_일괄다운로드.zip');
+  const outBlob = await mainZip.generateAsync({ type: 'blob' });
+  saveAs(outBlob, '품절처리_일괄다운로드.zip');
 });
-
 
 function updateProdCount() {
   document.getElementById('prodCountInfo').textContent = uniqueCodes.length
@@ -1277,10 +1287,16 @@ function showOptionSelectForEdit(code, wrapElem, colors, sizes) {
   box.id = 'editOptionBox_' + toSafeId(code);
   box.className = 'option-select-area popup';
   box.style.minWidth = '380px';
-  box.innerHTML = `
+box.innerHTML = `
     <div style="margin-bottom:8px;font-weight:600;font-size:14px;color:#2b7365">
       옵션 편집 모드 – <span style="color:#146f58">${code}</span>
     </div>
+
+    <button class="reset-btn"
+            style="width:100%;margin:6px 0 10px 0;"
+            onclick="event.stopPropagation(); deleteCodeRows('${code}')">
+      이 관리코드 행 전체 삭제
+    </button>
 
     <!-- 신규 옵션 추가 -->
     <div style="padding:8px;border:1px solid #cfe3d8;border-radius:8px;margin-bottom:10px;">
@@ -1680,6 +1696,116 @@ if (stEl) stEl.value = '99999';
 // 코드 비교용 표준화: 공백 제거 + 대문자
 function normCode(s) {
   return String(s ?? '').replace(/\s+/g, '').toUpperCase();
+}
+
+
+// ===== [NEW] 관리코드 전체 행 삭제 =====
+function deleteCodeRows(code) {
+  const target = normCode(code);
+
+  const before = allRows.length;
+  if (!confirm(`관리코드 "${code}"에 해당하는 모든 행을 삭제할까요?\n\n⚠️ 되돌리기는 새로고침 전까지 불가합니다.`)) {
+    return;
+  }
+
+  // 해당 관리코드(관리코드/상품코드/코드 어느 열이든)와 매칭되는 행 제거
+  allRows = allRows.filter(r => (
+    normCode(r['관리코드']) !== target &&
+    normCode(r['상품코드']) !== target &&
+    normCode(r['코드'])     !== target
+  ));
+
+  // 상태/코드 목록 정리
+  delete soldoutState[code];
+
+  const set = new Set();
+  allRows.forEach(r => {
+    const c = r['관리코드'] || r['상품코드'] || r['코드'] || '';
+    if (c) set.add(c);
+  });
+  uniqueCodes = Array.from(set);
+
+   // 재채번 후 UI 갱신
+   renumberAllFiles();
+   selectedCode = null;
+   updateCodeBtns();
+   updateProdCount();
+   updateSoldoutList();
+
+  alert(`삭제 완료: ${before - allRows.length}개 행`);
+}
+
+// === [NEW] 제품명 접두 순번 처리 유틸 ===
+function getLabelKey(row){
+  if (Object.prototype.hasOwnProperty.call(row, '제품선택')) return '제품선택';
+  if (Object.prototype.hasOwnProperty.call(row, '추가상품값')) return '추가상품값';
+  return null;
+}
+function hasSeqPrefix(label){
+  return /^\s*\d+\)\s*/.test(String(label||''));
+}
+function stripSeqPrefix(label){
+  return String(label||'').replace(/^\s*\d+\)\s*/, '');
+}
+function detectSeqWidthInFile(file){
+  let width = 2; // 기본 2자리 유지
+  for (const r of allRows){
+    if (r.file !== file) continue;
+    const key = getLabelKey(r); if (!key) continue;
+    const m = String(r[key]||'').match(/^\s*(\d+)\)\s*/);
+    if (m) width = Math.max(width, m[1].length);
+  }
+  return width;
+}
+function padSeq(n, width){
+  const s = String(n);
+  return s.length >= width ? s : '0'.repeat(width - s.length) + s;
+}
+
+/**
+ * 파일 단위로 '순번 접두사가 붙어있는 상품들'만 대상 삼아
+ * 코드의 최초 등장 순서대로 01), 02), ... 재채번
+ */
+function renumberProductPrefixesPerFile(file){
+  const width = detectSeqWidthInFile(file);
+
+  // 코드 최초 등장 인덱스(해당 파일 내, 접두 순번이 붙은 라벨만)
+  const firstIdxByCode = new Map();
+  for (let i=0; i<allRows.length; i++){
+    const r = allRows[i];
+    if (r.file !== file) continue;
+    const key = getLabelKey(r); if (!key) continue;
+    const label = r[key];
+    if (!hasSeqPrefix(label)) continue;
+
+    const code = r['관리코드'] || r['상품코드'] || r['코드'] || '';
+    if (code && !firstIdxByCode.has(code)) firstIdxByCode.set(code, i);
+  }
+
+  // 등장 순서대로 재채번
+  const orderedCodes = Array.from(firstIdxByCode.entries())
+    .sort((a,b)=>a[1]-b[1])
+    .map(([c])=>c);
+
+  orderedCodes.forEach((code, idx)=>{
+    const seq = padSeq(idx+1, width); // 01, 02, ...
+    for (const r of allRows){
+      if (r.file !== file) continue;
+      const c = r['관리코드'] || r['상품코드'] || r['코드'] || '';
+      if (c !== code) continue;
+      const key = getLabelKey(r); if (!key) continue;
+      const label = r[key];
+      if (!hasSeqPrefix(label)) continue; // 접두 없는 라벨은 건드리지 않음
+      const rest = stripSeqPrefix(label);
+      r[key] = `${seq}) ${rest}`;
+    }
+  });
+}
+
+/** 모든 파일에 대해 재채번 실행 */
+function renumberAllFiles(){
+  const files = Array.from(new Set(allRows.map(r=>r.file)));
+  files.forEach(renumberProductPrefixesPerFile);
 }
 
   </script>
