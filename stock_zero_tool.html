@@ -338,6 +338,7 @@ body {
         <button class="switch-btn"      id="modeEditBtn"     title="옵션 추가/삭제 모드">옵션 편집 모드</button>
         </div>
         <button class="switch-btn" id="toggleOptionModeBtn">색상,사이즈별 품절 OFF</button>
+        <button class="switch-btn" id="setAll99999Btn" title="모든 행 재고를 99999로 설정">모두 99999</button>
         <button class="reset-btn" id="resetBtn">초기화</button>
       </div>
 
@@ -693,6 +694,9 @@ document.getElementById('toggleOptionModeBtn').addEventListener('click', functio
   updateCodeBtns();
 });
 
+// 재고 99999 적용 버튼
+document.getElementById('setAll99999Btn').addEventListener('click', setAllStock99999);
+
 // 상단 모드 스위치 버튼
 const modeSoldoutBtn = document.getElementById('modeSoldoutBtn');
 const modeEditBtn    = document.getElementById('modeEditBtn');
@@ -764,6 +768,36 @@ async function handleFiles(filelist) {
   document.getElementById('fileCount').textContent = fileList.length > 1 ? `+${fileList.length}개` : '';
   document.getElementById('downloadBtn').disabled = false;
 }
+
+function setAllStock99999() {
+  if (!allRows.length) {
+    alert('먼저 파일을 업로드하세요.');
+    return;
+  }
+  const ok = confirm(
+    '모든 파일의 모든 행 재고를 99999로 설정합니다.\n' +
+    '※ 단종/품절로 지정된 항목은 다운로드 시 재고 0으로 적용됩니다.\n계속할까요?'
+  );
+  if (!ok) return;
+
+  // 모든 행의 재고수량을 99999로 세팅
+  for (const r of allRows) {
+    r['재고수량'] = 99999;
+  }
+
+  // 편집 팝업에 재고 숫자 칩이 보이는 상태라면 갱신
+  if (selectedCode) {
+    const listEl = document.getElementById(`optionList_${selectedCode}`);
+    if (listEl) listEl.innerHTML = renderOptionListHTML(selectedCode);
+  }
+
+  // 혼동 방지: 기존 체크박스는 꺼두는 게 직관적
+  const fillBox = document.getElementById('fillStockCheckbox');
+  if (fillBox) fillBox.checked = false;
+
+  alert('모든 재고를 99999로 설정했습니다.');
+}
+
 
 function readExcel(file) {
   return new Promise(resolve => {
