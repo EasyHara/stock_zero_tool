@@ -2,12 +2,12 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리코드별 색상/사이즈 품절툴</title>
+  <title>관리코드별 색상/사이즈 품절툴 (3-Column)</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
-  <meta name="viewport" content="width=1200">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
   <style>
 body {
@@ -17,40 +17,84 @@ body {
   font-size: 16px;
   margin: 0; padding: 0;
 }
+
+/* --- 1. 레이아웃 (3단 구조) --- */
 .container {
-  max-width: 1500px;
+  max-width: 1800px;
   margin: 22px auto 0 auto;
-  background: #fff;
-  padding: 30px 42px 38px 42px;
-  border-radius: 18px;
-  box-shadow: 0 2px 28px rgba(60,80,60,0.09);
+  padding: 0 24px;
   overflow-x: auto;
   min-height: 96vh;
   display: flex;
   flex-direction: row;
+  gap: 24px;
+  align-items: flex-start;
 }
+
+/* 1단: 메인 영역 (파일, 모드, 코드 목록) */
 .main-area {
-  flex: 1; min-width: 900px; margin-right: 32px;
+  flex: 1;
+  min-width: 500px;
+  background: #fff;
+  padding: 30px 42px 38px 42px;
+  border-radius: 18px;
+  box-shadow: 0 2px 28px rgba(60,80,60,0.09);
 }
+
+/* 2단: 컨텍스트 영역 (상세 작업 패널) */
+.context-area {
+  width: 420px;
+  min-width: 400px;
+  background: #fdfdfd;
+  border: 1px solid #e8f0eb;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(120,160,120,0.07);
+  padding: 22px 24px;
+  align-self: flex-start;
+  position: sticky;
+  top: 22px;
+  height: calc(100vh - 44px);
+  overflow-y: auto;
+  transition: border-color 0.2s, background 0.2s;
+}
+.context-placeholder {
+  text-align: center;
+  padding-top: 60px;
+  color: #9ab0a5;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+/* 3단: 사이드 영역 (결과 요약) */
 .side-area {
-  width: 380px; min-width: 320px;
+  width: 380px;
+  min-width: 320px;
   background: #f7faf8;
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(120,160,120,0.07);
-  padding: 18px 22px 18px 22px;
-  margin-top: 22px;
+  padding: 18px 22px 24px 22px;
+  margin-top: 0;
   align-self: flex-start;
-  position: sticky; top: 32px; height: fit-content;
+  position: sticky;
+  top: 22px;
+  height: calc(100vh - 44px);
+  display: flex;
+  flex-direction: column;
 }
 .side-area h3 { font-size: 1.1rem; font-weight: 600; color: #195140; margin-bottom: 6px; }
 .side-area ul {
   font-size: 14.5px; list-style: none; margin: 0; padding: 0;
+  flex: 1; /* 리스트가 남은 공간 차지 */
+  overflow-y: auto;
 }
 .side-area ul li {
   background: #e1ece6; border-radius: 7px;
   margin-bottom: 7px; padding: 6px 11px; color: #315e4d;
   font-weight: 500; word-break: break-all;
 }
+
+/* --- 2. 컨트롤 (버튼, 입력 등) --- */
 .main-title-wrap {
   display: flex; align-items: flex-end; justify-content: space-between;
   min-height: 48px; margin-bottom: 16px; position: relative; padding-right: 42px;
@@ -60,63 +104,37 @@ body {
   margin: 0 0 0 16px; letter-spacing: 0.02em;
 }
 .back-btn {
-  background: #e1ece6;
-  border: 1.2px solid #b0c9bb;
-  color: #246b5c;
-  border-radius: 10px;
-  padding: 11px 22px;
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 18px;
-  margin-top: 6px;
-  margin-left: 8px;
-  cursor: pointer;
+  background: #e1ece6; border: 1.2px solid #b0c9bb; color: #246b5c;
+  border-radius: 10px; padding: 11px 22px; font-size: 15px; font-weight: 600;
+  margin-bottom: 18px; margin-top: 6px; margin-left: 8px; cursor: pointer;
   transition: background 0.13s, color 0.13s;
 }
-.back-btn:hover {
-  background: #d2e3da;
-  color: #184c37;
-  border-color: #89ac98;
-}
+.back-btn:hover { background: #d2e3da; color: #184c37; border-color: #89ac98; }
 
 .file-select-area {
   display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
 }
 .file-label {
-  background: #e1ece6;
-  color: #296149;
-  border: 1.2px solid #b0c9bb;
-  border-radius: 10px;
-  padding: 11px 23px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-block;
-  margin-right: 8px;
+  background: #e1ece6; color: #296149; border: 1.2px solid #b0c9bb;
+  border-radius: 10px; padding: 11px 23px; font-size: 15px; font-weight: 600;
+  cursor: pointer; display: inline-block; margin-right: 8px;
   transition: background 0.13s; text-align: center;
 }
 .file-label:hover { background: #d2e3da; color: #184c37; border-color: #89ac98; }
 .file-input { display: none; }
 
 .switch-btn {
-  min-width: 135px;
-  background: #e1ece6;
-  color: #247467;
-  border: 1.2px solid #b0c9bb;
-  border-radius: 10px;
-  padding: 11px 18px;
-  font-size: 15px;
-  font-weight: 700;
-  margin-left: 8px;
-  cursor: pointer;
+  min-width: 135px; background: #e1ece6; color: #247467;
+  border: 1.2px solid #b0c9bb; border-radius: 10px; padding: 11px 18px;
+  font-size: 15px; font-weight: 700; margin-left: 8px; cursor: pointer;
   transition: background 0.14s;
 }
 .switch-btn.on { background: #61ad80; color: #fff; border-color: #38885b; }
 
 .reset-btn {
   min-width: 72px; margin-left: 8px; background: #f5c8c8; color: #ad2c2c;
-  border: 1.2px solid #f3d1d1; font-weight: 500; transition: background 0.12s, color 0.13s; padding: 11px 14px;
-  font-size: 14px; border-radius: 10px;
+  border: 1.2px solid #f3d1d1; font-weight: 500; transition: background 0.12s, color 0.13s;
+  padding: 11px 14px; font-size: 14px; border-radius: 10px;
 }
 .reset-btn:hover { background: #f3b0b0; color: #8a2525; border-color: #e2b1b1; }
 
@@ -124,168 +142,120 @@ body {
   display: flex; align-items: center; gap: 18px; margin: 7px 0 18px 0; font-size: 15px;
 }
 .check-row input[type="checkbox"] {
-  accent-color: #2a6e52; width: 19px; height: 19px; vertical-align: middle; margin-right: 5px; margin-top: 1.5px;
+  accent-color: #2a6e52; width: 19px; height: 19px;
+  vertical-align: middle; margin-right: 5px; margin-top: 1.5px;
 }
 
-/* 관리코드 옵션 버튼 */
+/* --- 3. 관리코드 버튼 (1단) --- */
 #codeBtnArea {
-  margin-top: 15px;
-  margin-bottom: 8px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 16px;
-}
-.code-btn-wrap {
-  position: relative;
-  display: inline-block;
-  vertical-align: top;
+  margin-top: 15px; margin-bottom: 8px;
+  display: flex; flex-wrap: wrap; gap: 12px 16px;
 }
 .code-btn {
-  min-width: 128px;
-  max-width: 220px;
-  background: #e1ece6;
-  border: 1.2px solid #b0c9bb;
-  border-radius: 13px;
-  font-size: 15px;
-  font-weight: 700;
-  color: #255c43;
-  padding: 11px 12px;
-  margin: 0;
-  cursor: pointer;
-  transition: background 0.13s, color 0.13s;
-  outline: none;
-  box-shadow: 0 1px 3px rgba(60,90,60,0.03);
-  text-align: center;
-  word-break: keep-all;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  letter-spacing: 0.01em;
+  min-width: 128px; max-width: 220px; background: #e1ece6;
+  border: 1.2px solid #b0c9bb; border-radius: 13px; font-size: 15px;
+  font-weight: 700; color: #255c43; padding: 11px 12px; margin: 0;
+  cursor: pointer; transition: background 0.13s, color 0.13s, border 0.13s, box-shadow 0.13s;
+  outline: none; box-shadow: 0 1px 3px rgba(60,90,60,0.03);
+  text-align: center; word-break: keep-all; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; letter-spacing: 0.01em;
 }
-.code-btn.selected, .code-btn.has-soldout {
+/* 상태: 개별 품절/단종 있음 */
+.code-btn.has-soldout {
+  background: #73bc98 !important; color: #fff !important; border-color: #5cb88a;
+  filter: brightness(0.98); border-style: dashed;
+}
+/* 상태: 전체 품절 */
+.code-btn.is-soldout-all {
   background: #73bc98 !important; color: #fff !important; border-color: #5cb88a;
 }
-
-.code-btn.selected { box-shadow: 0 0 0 2px #b5e9d6 inset; border-width: 2px; }
-.code-btn.has-soldout:not(.selected) { filter: brightness(0.98); border-style: dashed; }
-
-/* 옵션 선택 박스 (popup) - "색상/사이즈 옵션을 선택하세요." */
-.option-select-area.popup {
-  position: absolute;
-  left: 0;
-  top: calc(100% + 15px); /* 버튼 아래로 충분히 여백 */
-  z-index: 20;
-  min-width: 220px;
-  max-width: 320px;
-  box-shadow: 0 6px 36px rgba(80,100,80,0.14);
-  background: #fff;
-  border: 1.5px solid #7ad4b3;
-  padding: 18px 13px 16px 13px;
-  margin: 0;
-  border-radius: 11px;
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+/* 상태: 전체 단종 */
+.code-btn.is-discont-all {
+  background: #856ed9 !important; color: #fff !important; border-color: #533e8e;
 }
-.option-select-area .option-btn-grid {
+/* 상태: 현재 선택됨 (활성) */
+.code-btn.selected {
+  box-shadow: 0 0 0 3px #b5e9d6 inset !important;
+  border-color: #4bc79f !important; border-width: 2px;
+}
+
+/* --- 4. 컨텍스트 패널 내부 (2단) --- */
+.context-area h2 {
+  font-size: 1.5rem; color: #146f58; margin: 0 0 12px 0;
+  word-break: break-all;
+}
+.context-area .section-title {
+  margin-bottom: 10px; font-weight: 600; font-size: 14px;
+  color: #2b7365; border-bottom: 1px solid #e0e0e0; padding-bottom: 6px;
+}
+.context-area .control-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  margin-bottom: 15px;
+}
+.context-area .control-grid .switch-btn {
+  margin-left: 0; width: 100%; min-width: unset; padding: 14px 10px;
+}
+
+/* 2단: 옵션 버튼 그리드 (품절 모드) */
+.option-btn-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(46px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
   gap: 8px 10px;
   width: 100%;
   margin: 11px 0 6px 0;
 }
-
-/* 옵션 선택 박스 내부 옵션 버튼 */
 .option-btn {
-  display: inline-block;
-  min-width: 46px;
-  min-height: 28px;
-  background: #e1ece6;
-  border: 1.2px solid #b0c9bb;
-  border-radius: 9px;
-  font-size: 12px !important;
-  font-weight: 500;
-  color: #315e4d;
-  padding: 8px 0;
-  margin: 0;
-  cursor: pointer;
+  display: inline-block; min-width: 46px; min-height: 28px;
+  background: #e1ece6; border: 1.2px solid #b0c9bb; border-radius: 9px;
+  font-size: 12px !important; font-weight: 500; color: #315e4d;
+  padding: 8px 6px; margin: 0; cursor: pointer;
   transition: background 0.13s, color 0.13s;
-  outline: none;
-  text-align: center;
-  box-sizing: border-box;
+  outline: none; text-align: center; box-sizing: border-box;
+  word-break: break-all;
 }
-
-
-/* 옵션 선택 팝업 닫기 버튼 */
-.option-soldout-area {
-  margin-top: 6px;
-  background: #f8f3f3;
-  border-radius: 8px;
-  padding: 10px 0;
-  border: 1.1px solid #eed1d1;
-  font-size: 14px !important;
-  color: #c34343;
-  text-align: center;
-  cursor: pointer;
-  width: 100%;
-  font-weight: 600;
-  margin-bottom: 0;
-}
-
-.download-btn {
-  margin-top: 36px; background: #e1ece6; color: #27624f; border: 1.2px solid #b0c9bb;
-  border-radius: 11px; padding: 16px 22px; font-size: 17px; font-weight: 700; cursor: pointer;
-  min-width: 240px; transition: background 0.13s, color 0.13s;
-  display: block; margin-left: auto; margin-right: auto;
-  box-shadow: 0 2px 14px rgba(120,180,120,0.09);
-}
-.download-btn:hover { background: #bce3c7; color: #155c3f; border-color: #5cb88a; }
-
 .option-btn.selected {
-  background: #f3d8d8 !important;
-  color: #b45454 !important;
-  border-color: #e1bbbb;
-  font-weight: 600;
+  background: #f3d8d8 !important; color: #b45454 !important;
+  border-color: #e1bbbb; font-weight: 600;
 }
 .option-btn.discont {
-  background: #533e8e !important;
-  color: #fff !important;
-  border-color: #6c4ff8;
-  font-weight: 700;
-}
-.code-btn.discont { background: #856ed9 !important; color: #fff !important; border-color: #533e8e; }
-
-#fileDropZone.dragover {
-  background: #c9e8de;
-  border-radius: 13px;
-  box-shadow: 0 0 0 3px #2ba87d7a;
+  background: #533e8e !important; color: #fff !important;
+  border-color: #6c4ff8; font-weight: 700;
 }
 
-.code-btn[style*="box-shadow"] {
-  outline: 2.5px solid #7ae8c8;
+/* 2단: 옵션 편집 폼 (편집 모드) */
+.edit-form-area {
+  padding: 10px; border:1px solid #cfe3d8; border-radius:8px; margin-bottom:12px;
+  background: #fcfefd;
 }
-.switch-btn {
-  padding: 6px 12px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-  background: #f4f4f4;
-  cursor: pointer;
-  font-size: 14px;
+.edit-form-area .form-title {
+  font-size: 12px; color: #547a6b; margin-bottom: 8px; font-weight: 600;
 }
-.switch-btn.on {
-  background: #2b7365;
-  color: #fff;
-  border-color: #2b7365;
+.edit-form-area input[type="text"],
+.edit-form-area input[type="number"] {
+  flex: 1; padding: 6px 8px; font-size: 13px; border: 1px solid #b0c9bb;
+  border-radius: 6px; box-sizing: border-box; width: 100%;
+}
+.edit-form-area input[type="text"]:disabled { background: #f0f0f0; }
+.edit-form-area .input-row { display:flex; gap:6px; margin-bottom:6px; }
+.edit-form-area .add-btn {
+  width: 100%; padding: 8px; font-size: 14px; background: #2b7365;
+  color: #fff; border: none; border-radius: 6px; cursor: pointer;
+  font-weight: 600; margin-top: 4px;
+}
+.edit-form-area .form-help {
+  margin-top: 8px; font-size: 11px; color: #7a8d84; line-height: 1.4;
 }
 
-/* --- 옵션 목록(편집 모드) 카드형 보기 --- */
-.opt-file { border:1px solid #e3efe7; border-radius:10px; padding:10px; margin:8px 0; background:#fbfdfc; }
+/* 2단: 옵션 목록 (편집 모드) */
+.option-list-container {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 350px; overflow: auto;
+  border: 1px solid #e0eee8; padding: 6px; border-radius: 8px;
+}
+.opt-file { border:1px solid #e3efe7; border-radius:10px; padding:10px; margin:4px 0; background:#fbfdfc; }
 .opt-file__title { font-size:12px; color:#5b7e6f; font-weight:700; margin-bottom:6px; }
-
 .opt-color { padding:8px 10px; border-radius:8px; background:#f5fbf8; border:1px solid #e0eee8; margin:6px 0; }
 .opt-color__title { font-size:13px; color:#1f6e59; font-weight:700; margin-bottom:6px; }
-
 .opt-sizes { display:flex; flex-wrap:wrap; gap:6px; }
 .size-chip {
   display:inline-flex; align-items:center; gap:6px;
@@ -296,21 +266,46 @@ body {
 .size-chip.is-zero { background:#fdecec; border-color:#f3c9c9; color:#a43a3a; }
 .opt-empty { color:#9aa8a2; font-size:12px; text-align:center; padding:12px 0; }
 
-@media (max-width: 1100px) {
+/* 2단/3단 공통 닫기/다운로드 버튼 */
+.panel-close-btn {
+  margin-top: 15px; background: #f8f3f3; border-radius: 8px;
+  padding: 10px 0; border: 1.1px solid #eed1d1; font-size: 14px !important;
+  color: #c34343; text-align: center; cursor: pointer; width: 100%;
+  font-weight: 600; margin-bottom: 0;
+}
+.download-btn {
+  margin-top: 24px; background: #e1ece6; color: #27624f; border: 1.2px solid #b0c9bb;
+  border-radius: 11px; padding: 16px 22px; font-size: 17px; font-weight: 700;
+  cursor: pointer; min-width: 240px; transition: background 0.13s, color 0.13s;
+  display: block; width: 100%; box-sizing: border-box;
+  box-shadow: 0 2px 14px rgba(120,180,120,0.09);
+}
+.download-btn:hover { background: #bce3c7; color: #155c3f; border-color: #5cb88a; }
+
+/* --- 5. 반응형 --- */
+@media (max-width: 1500px) {
   .container { flex-direction: column; max-width: 99vw; padding: 22px 3vw; }
-  .main-area, .side-area { min-width: unset; width: unset; }
-  .side-area { margin-top: 30px; width: 96vw; max-width: 460px; }
-  .code-btn { min-width: 92px; font-size: 13px; padding: 9px 7px; }
+  .main-area, .context-area, .side-area {
+    min-width: unset; width: 90vw; max-width: 800px;
+    margin: 0 auto;
+    position: static; height: auto; max-height: unset;
+  }
+  .context-area { margin-top: 24px; }
+  .side-area { margin-top: 24px; }
 }
 @media (max-width: 660px) {
-  .main-title { font-size: 1.1rem; }
+  .main-title { font-size: 1.8rem; }
   .container { padding: 5vw 0; }
-  .side-area { padding: 6px 2vw; }
+  .main-area, .context-area, .side-area { padding: 18px 4vw; width: 92vw; }
+  .file-select-area { flex-wrap: wrap; }
+  .code-btn { min-width: 92px; font-size: 13px; padding: 9px 7px; }
 }
   </style>
 </head>
 <body>
+
   <div class="container">
+
     <div class="main-area">
       <button class="back-btn" onclick="location.href='https://easyhara.github.io/smartstore_options/smartstore_options.html'">
         &larr; 옵션 자동 생성기로 돌아가기
@@ -319,13 +314,13 @@ body {
         <h1 class="main-title">관리코드별 색상/사이즈 품절툴</h1>
       </div>
       <div style="margin-bottom:12px; font-size:15.5px; line-height:1.54;">
-        여러 옵션 파일을 업로드하고<br>
-        <b style="color:#248960;">관리코드</b>를 클릭하면 전체 품절, 또는<br>
-        <span style="color:#3c6844; font-weight:600;">색상·사이즈별 품절</span>을 선택해서 원하는 옵션만 재고 0(품절)로 변경합니다.<br>
+        여러 옵션 파일을 업로드하고 <b style="color:#248960;">관리코드</b>를 클릭하면<br>
+        우측 패널에서 <span style="color:#3c6844; font-weight:600;">전체 품절, 개별 품절/단종</span>을 선택하거나 옵션을 편집합니다.<br>
         <span style="color:#c63737;">
         옵션 이름은 반드시 각 행의 ‘색상’, ‘사이즈’ 컬럼에 정확히 입력되어 있어야 합니다.
         </span>
       </div>
+
       <div class="file-select-area" id="fileDropZone">
         <label class="file-label">
           엑셀파일선택
@@ -333,13 +328,15 @@ body {
         </label>
         <span id="fileNames" style="font-size:15px;max-width:360px;display:inline-block;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
         <span id="fileCount" style="font-size:14px;color:#1b8863;margin-left:7px;"></span>
-       <div id="modeSwitchGroup" style="display:flex; align-items:center; gap:6px; margin-left:8px;">
-        <button class="switch-btn on"  id="modeSoldoutBtn"  title="품절/단종 선택 모드">품절/단종 모드</button>
-        <button class="switch-btn"      id="modeEditBtn"     title="옵션 추가/삭제 모드">옵션 편집 모드</button>
-        </div>
-        <button class="switch-btn" id="toggleOptionModeBtn">색상,사이즈별 품절 OFF</button>
-        <button class="switch-btn" id="setAll99999Btn" title="모든 행 재고를 99999로 설정">모두 99999</button>
         <button class="reset-btn" id="resetBtn">초기화</button>
+      </div>
+
+      <div class="file-select-area">
+        <div id="modeSwitchGroup" style="display:flex; align-items:center; gap:6px; margin-left:8px;">
+          <button class="switch-btn on" id="modeSoldoutBtn" title="품절/단종 선택 모드">품절/단종 모드</button>
+          <button class="switch-btn" id="modeEditBtn" title="옵션 추가/삭제 모드">옵션 편집 모드</button>
+        </div>
+        <button class="switch-btn" id="setAll99999Btn" title="모든 행 재고를 99999로 설정">모두 99999</button>
       </div>
 
       <div class="check-row">
@@ -349,30 +346,50 @@ body {
         </label>
         <span id="prodCountInfo" style="font-size:15.2px;color:#3b7c53;"></span>
       </div>
+
       <div id="codeBtnArea"></div>
-      <button class="download-btn" id="downloadBtn" disabled>선택 품절처리 & 파일 다운로드</button>
     </div>
+
+    <div class="context-area" id="contextArea">
+      <div class="context-placeholder">
+        &larr; 왼쪽에서 관리코드를 선택하면<br>이곳에 상세 작업 패널이 나타납니다.
+      </div>
+    </div>
+
     <div class="side-area">
       <h3>선택된 품절 옵션</h3>
       <ul id="soldoutList">
         <li style="color:#b5b5b5;">(선택내역 없음)</li>
       </ul>
+      <button class="download-btn" id="downloadBtn" disabled>선택 품절처리 & 파일 다운로드</button>
     </div>
+
   </div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
   <script>
-    
-    // === Global state (필수) ===
+// === Global state (필수) ===
 let fileList = [];
 let fileDataArr = [];
 let allRows = [];
 let uniqueCodes = [];
 let soldoutState = {};
-let optionMode = false;
 let selectedCode = null;
+let mode = 'soldout'; // 'soldout' | 'edit'
 
-// === 다운로드 직전 검증 ===
+// === DOM Elements ===
+const codeBtnArea = document.getElementById('codeBtnArea');
+const contextArea = document.getElementById('contextArea');
+const soldoutListUl = document.getElementById('soldoutList');
+const downloadBtn = document.getElementById('downloadBtn');
+const inputFilesElem = document.getElementById('inputFiles');
+const fileNamesElem = document.getElementById('fileNames');
+const fileCountElem = document.getElementById('fileCount');
+const prodCountInfoElem = document.getElementById('prodCountInfo');
+const modeSoldoutBtn = document.getElementById('modeSoldoutBtn');
+const modeEditBtn = document.getElementById('modeEditBtn');
+
+
+// === 다운로드 직전 검증 (기존 코드 유지) ===
 function buildValidationReport() {
   const r = {
     missingCode: [],
@@ -381,25 +398,20 @@ function buildValidationReport() {
     mixedSizePattern: [],
     totals: { rows: allRows.length }
   };
-
-  const dupMap = new Map();                     // key -> {count, samples}
-  const mixMap = new Map();                     // (file||code) -> {hasSlash, hasPlain}
+  const dupMap = new Map();
+  const mixMap = new Map();
   const sizeSlashRe = /^([A-Za-z0-9]+)\s*\/\s*.+$/;
-
   allRows.forEach((row, i) => {
     const code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
     if (!code) r.missingCode.push(i);
-
     const { color, size } = extractColorAndSize(row);
     const label = (row['제품선택'] || row['추가상품값'] || '').toString().trim();
     if (!color && !size && !label) r.parseFail.push(i);
-
     const k = `${row.file}||${code}||${color}||${size}`;
     if (!dupMap.has(k)) dupMap.set(k, { count: 0, samples: [] });
     const d = dupMap.get(k);
     d.count++;
     if (d.samples.length < 5) d.samples.push(i);
-
     const bucket = `${row.file}||${code}`;
     const v = (row['사이즈'] ?? '').toString().trim();
     if (v) {
@@ -408,31 +420,25 @@ function buildValidationReport() {
       if (sizeSlashRe.test(v)) cur.hasSlash = true; else cur.hasPlain = true;
     }
   });
-
   dupMap.forEach((v, key) => { if (v.count > 1) r.duplicates.push({ key, count: v.count, samples: v.samples }); });
-
   mixMap.forEach((v, bucket) => {
     if (v.hasSlash && v.hasPlain) {
       const [file, code] = bucket.split('||');
       r.mixedSizePattern.push({ file, code, detail: '사이즈 열에 접미사 패턴과 순수값이 혼재' });
     }
   });
-
   r.totals.issues =
     r.missingCode.length + r.parseFail.length + r.duplicates.length + r.mixedSizePattern.length;
-
   return r;
 }
-
 function formatValidationSummary(report) {
   if (!report || !report.totals) return '검증 결과를 생성하지 못했습니다.';
   const lines = [];
   lines.push(`총 행: ${report.totals.rows.toLocaleString()}개`);
   lines.push(`- 관리코드 누락: ${report.missingCode.length}개`);
-  lines.push(`- 색상/사이즈 파싱 실패: ${report.parseFail.length}개`);
+  lines.push(`- 색상/사이Z즈 파싱 실패: ${report.parseFail.length}개`);
   lines.push(`- 중복 옵션 키: ${report.duplicates.length}개 그룹`);
   lines.push(`- 혼재된 사이즈 표기: ${report.mixedSizePattern.length}개 그룹`);
-
   if (report.duplicates.length) {
     const s = report.duplicates.slice(0, 3).map(d => {
       const [file, code, color, size] = d.key.split('||');
@@ -449,51 +455,34 @@ function formatValidationSummary(report) {
   return lines.join('\n');
 }
 
-
-// id 안전치환 (버튼/팝업 id 만들 때 사용)
-function toSafeId(str) {
-  return String(str).replace(/[^a-zA-Z0-9\-_:.]/g, '_');
-}
-
-// 행에서 색상/사이즈 추출 (컬럼/라벨/패턴 모두 대응)
+// === 유틸리티 함수 (기존 코드 유지) ===
+function toSafeId(str) { return String(str).replace(/[^a-zA-Z0-9\-_:.]/g, '_'); }
 function extractColorAndSize(row) {
   let color = (row['색상']  ?? '').toString().trim();
   let size  = (row['사이즈'] ?? '').toString().trim();
   const label = (row['제품선택'] || row['추가상품값'] || '').toString().trim();
   const tokens = label ? label.split('/').map(s => s.trim()).filter(Boolean) : [];
-
-  // Case B: 색상열이 "NN / 접미사"이면 NN을 사이즈로 인식
   const m = color.match(/^([A-Za-z0-9]+)\s*\/\s*(.+)$/);
   if (!size && m && isSizeToken(m[1])) {
     size = m[1].trim();
-    // 실제 색상은 라벨의 마지막 '사이즈가 아닌' 토큰으로 추정
     for (let i = tokens.length - 1; i >= 0; i--) {
       if (!isSizeToken(tokens[i])) { color = tokens[i]; break; }
     }
   }
-
-  // 보강: 여전히 size가 없으면 라벨에서 마지막 사이즈 토큰
   if (!size && tokens.length) {
     for (let i = tokens.length - 1; i >= 0; i--) {
       if (isSizeToken(tokens[i])) { size = tokens[i]; break; }
     }
   }
-  // 보강: 여전히 color가 없으면 라벨의 마지막 비-사이즈 토큰
   if (!color && tokens.length) {
     for (let i = tokens.length - 1; i >= 0; i--) {
       if (!isSizeToken(tokens[i])) { color = tokens[i]; break; }
     }
   }
-
   if (size && size.includes('/')) size = size.split('/')[0].trim();
   return { color: color || '', size: size || '' };
 }
-
-
-// 사이즈 토큰 판단 & 정렬 도우미 (이미 있으면 중복 추가 X)
-function isSizeToken(v){
-  return /^(FREE|XS|S|M|L|XL|XXL|\d{2,3})$/i.test(String(v||'').trim());
-}
+function isSizeToken(v){ return /^(FREE|XS|S|M|L|XL|XXL|\d{2,3})$/i.test(String(v||'').trim()); }
 const SIZE_ORDER = ['FREE','XS','S','M','L','XL','XXL'];
 function sizeKey(v){
   const u = String(v||'').toUpperCase().trim();
@@ -510,20 +499,14 @@ function compareSize(a,b){
   if (ka.v > kb.v) return 1;
   return 0;
 }
-
-// 라벨 → 토큰
 function labelToTokens(rowOrLabel){
   const raw = typeof rowOrLabel === 'string'
     ? rowOrLabel
     : (rowOrLabel['제품선택'] || rowOrLabel['추가상품값'] || '').toString();
   return raw.split('/').map(s => s.trim()).filter(Boolean);
 }
-
-// (파일+관리코드) 기준: 라벨이 "색상"을 포함하는 형식인지
 function labelHasColorForCodeInFile(code, file){
   const rows = allRows.filter(r => r.file === file && r.관리코드 === code);
-
-  // 이 코드/파일에 실제로 존재하는 '색상 후보'를 모두 수집
   const colorSetUpper = new Set(
     rows.map(r => (r['색상'] || extractColorAndSize(r).color || '')
           .toString().trim())
@@ -531,28 +514,20 @@ function labelHasColorForCodeInFile(code, file){
         .map(c => c.toUpperCase())
   );
   if (colorSetUpper.size === 0) return false;
-
-  // 라벨 토큰에 위 색상 후보 중 하나라도 있으면 "라벨에 색상 있음"
   return rows.some(r => {
     const toks = labelToTokens(r).map(t => t.toUpperCase());
     for (const C of colorSetUpper) if (toks.includes(C)) return true;
     return false;
   });
 }
-
-
-// 상품명 뒤에 색상 삽입 (해당 코드에서 쓰는 색상 토큰들 제거 후 삽입)
 function buildLabelInsertColorAfterProductForCodeFile(code, file, tplRow, newColor){
   const tokens = labelToTokens(tplRow);
-
-  // 이 코드/파일의 모든 색상 후보를 '컬럼' + '라벨 추출' 양쪽에서 모아 세트화
   const colorSetUpper = new Set(
     allRows
       .filter(r => r.file === file && r.관리코드 === code)
       .map(r => {
         let c = (r['색상'] || '').toString().trim();
         if (!c) {
-          // 색상 컬럼이 비어 있으면 라벨에서 추출
           const ex = extractColorAndSize(r);
           c = ex.color || '';
         }
@@ -561,20 +536,13 @@ function buildLabelInsertColorAfterProductForCodeFile(code, file, tplRow, newCol
       .filter(Boolean)
       .map(c => c.toUpperCase())
   );
-
-  // 기존 라벨에서 '이미 쓰인 색상 토큰'과 '사이즈 토큰'을 제거
   const filtered = tokens.filter(t => {
     const T = t.toUpperCase();
     return !colorSetUpper.has(T) && !isSizeToken(t);
   });
-
-  // 제품명 뒤(첫 토큰 뒤)에 새 색상 삽입
   const out = [...filtered.slice(0,1), newColor, ...filtered.slice(1)];
   return out.filter(Boolean).join(' / ');
 }
-
-
-// 라벨의 마지막 '사이즈 같은 토큰'만 교체 (접미사 보존)
 function replaceLastSizeTokenInLabel(labelStr, newSize){
   const tokens = labelStr.split('/').map(s => s.trim()).filter(Boolean);
   for (let i = tokens.length - 1; i >= 0; i--){
@@ -582,53 +550,33 @@ function replaceLastSizeTokenInLabel(labelStr, newSize){
   }
   return [newSize, ...tokens].join(' / ');
 }
-
 function detectSizeDisplayPatternForCodeFile(code, file) {
   const rows = allRows.filter(r => r.file===file && r.관리코드===code);
-
-  // [사이즈 열이 "NN / 접미사" 패턴]
   for (const r of rows) {
     const v = (r['사이즈'] ?? '').toString().trim();
     const m = v.match(/^([A-Za-z0-9]+)\s*\/\s*(.+)$/);
     if (m && isSizeToken(m[1])) {
       const suf = m[2].trim();
-      return {
-        column: '사이즈',
-        suffix: suf,
-        format: val => `${val} / ${suf}`,                // ← 기록할 때 접미사 붙이기
-        parse:  row => {
+      return { column: '사이즈', suffix: suf, format: val => `${val} / ${suf}`, parse:  row => {
           const vv = (row['사이즈'] ?? '').toString().trim();
           const mm = vv.match(/^([A-Za-z0-9]+)\s*\/\s*(.+)$/);
-          return mm ? mm[1].trim() : vv;                // ← 비교/정렬은 숫자만
+          return mm ? mm[1].trim() : vv;
         }
       };
     }
   }
-
-  // [사이즈 열이 순수 값]
   for (const r of rows) {
     const v = (r['사이즈'] ?? '').toString().trim();
     if (v) {
-      return {
-        column: '사이즈',
-        suffix: '',
-        format: val => val,
-        parse:  row => (row['사이즈'] ?? '').toString().trim()
-      };
+      return { column: '사이즈', suffix: '', format: val => val, parse:  row => (row['사이즈'] ?? '').toString().trim() };
     }
   }
-
-  // [색상 열이 "NN / 접미사" 패턴]
   for (const r of rows) {
     const v = (r['색상'] ?? '').toString().trim();
     const m = v.match(/^([A-Za-z0-9]+)\s*\/\s*(.+)$/);
     if (m && isSizeToken(m[1])) {
       const suf = m[2].trim();
-      return {
-        column: '색상',
-        suffix: suf,
-        format: val => `${val} / ${suf}`,
-        parse:  row => {
+      return { column: '색상', suffix: suf, format: val => `${val} / ${suf}`, parse:  row => {
           const vv = (row['색상'] ?? '').toString().trim();
           const mm = vv.match(/^([A-Za-z0-9]+)\s*\/\s*(.+)$/);
           return mm ? mm[1].trim() : '';
@@ -636,12 +584,8 @@ function detectSizeDisplayPatternForCodeFile(code, file) {
       };
     }
   }
-
   return { column: null, suffix: '', format: v => v, parse: () => '' };
 }
-
-
-// 해당 행이 지정 색상인지 판단 (패턴 고려)
 function rowHasColorWithPattern(row, color, pattern){
   const label = (row['제품선택'] || row['추가상품값'] || '').toString();
   const tokens = label.split('/').map(s=>s.trim());
@@ -652,8 +596,6 @@ function rowHasColorWithPattern(row, color, pattern){
   }
   return false;
 }
-
-// 같은 파일+코드+색상 블록을 사이즈 오름차순으로 재정렬
 function reorderColorBlock(file, code, color, pattern){
   const list = [];
   for (let i=0;i<allRows.length;i++){
@@ -663,14 +605,12 @@ function reorderColorBlock(file, code, color, pattern){
     }
   }
   if (list.length <= 1) return;
-
   const baseStart = Math.min(...list.map(o=>o.idx));
   const sortedRows = list.map(o=>o.row).sort((a,b)=>{
     const sa = pattern.parse(a);
     const sb = pattern.parse(b);
     return compareSize(sa, sb);
   });
-
   const removeIdx = new Set(list.map(o=>o.idx));
   const kept = [];
   for (let i=0;i<allRows.length;i++){
@@ -679,69 +619,144 @@ function reorderColorBlock(file, code, color, pattern){
   kept.splice(baseStart, 0, ...sortedRows);
   allRows = kept;
 }
+function cssEscapeId(raw) { return String(raw).replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g, '\\$1'); }
+function getCodeKey(row) {
+  const norm = s => String(s).replace(/\s/g, '').toLowerCase();
+  const keys = Object.keys(row || {});
+  const find = want => keys.find(k => norm(k) === norm(want));
+  return find('관리코드') || find('상품코드') || find('코드') || null;
+}
+function rowsByCode(code) {
+  const target = normCode(code);
+  return allRows.filter(r => (
+    normCode(r['관리코드']) === target ||
+    normCode(r['상품코드']) === target ||
+    normCode(r['코드'])       === target
+  ));
+}
+function makeDiscontCode(origin) {
+  let base = String(origin || '').replace(/^(단종\s*)+/g, '').trim();
+  let out = '단종 ' + base;
+  if (out.length > 20) {
+    const compact = out.replace(/\s+/g, '');
+    out = '단종' + compact.slice(2);
+    if (out.length > 20) out = out.slice(0, 20);
+  }
+  return out;
+}
+function findLastIndex(arr, pred){
+  for (let i = arr.length - 1; i >= 0; i--) if (pred(arr[i], i, arr)) return i;
+  return -1;
+}
+function normCode(s) { return String(s ?? '').replace(/\s+/g, '').toUpperCase(); }
 
-// ▼ 모드 상태: 'soldout' | 'edit'
-let mode = 'soldout';
+// === [신규] 순번 재정렬 유틸 (기존 코드 유지) ===
+function getLabelKey(row){
+  if (Object.prototype.hasOwnProperty.call(row, '제품선택')) return '제품선택';
+  if (Object.prototype.hasOwnProperty.call(row, '추가상품값')) return '추가상품값';
+  return null;
+}
+function hasSeqPrefix(label){ return /^\s*\d+\)\s*/.test(String(label||'')); }
+function stripSeqPrefix(label){ return String(label||'').replace(/^\s*\d+\)\s*/, ''); }
+function detectSeqWidthInFile(file){
+  let width = 2;
+  for (const r of allRows){
+    if (r.file !== file) continue;
+    const key = getLabelKey(r); if (!key) continue;
+    const m = String(r[key]||'').match(/^\s*(\d+)\s*/);
+    if (m) width = Math.max(width, m[1].length);
+  }
+  return width;
+}
+function padSeq(n, width){
+  const s = String(n);
+  return s.length >= width ? s : '0'.repeat(width - s.length) + s;
+}
+function renumberProductPrefixesPerFile(file){
+  const width = detectSeqWidthInFile(file);
+  const firstIdxByCode = new Map();
+  for (let i=0; i<allRows.length; i++){
+    const r = allRows[i];
+    if (r.file !== file) continue;
+    const key = getLabelKey(r); if (!key) continue;
+    const label = r[key];
+    if (!hasSeqPrefix(label)) continue;
+    const code = r['관리코드'] || r['상품코드'] || r['코드'] || '';
+    if (code && !firstIdxByCode.has(code)) firstIdxByCode.set(code, i);
+  }
+  const orderedCodes = Array.from(firstIdxByCode.entries())
+    .sort((a,b)=>a[1]-b[1])
+    .map(([c])=>c);
+  orderedCodes.forEach((code, idx)=>{
+    const seq = padSeq(idx+1, width);
+    for (const r of allRows){
+      if (r.file !== file) continue;
+      const c = r['관리코드'] || r['상품코드'] || r['코드'] || '';
+      if (c !== code) continue;
+      const key = getLabelKey(r); if (!key) continue;
+      const label = r[key];
+      if (!hasSeqPrefix(label)) continue;
+      const rest = stripSeqPrefix(label);
+      r[key] = `${seq}) ${rest}`;
+    }
+  });
+}
+function renumberAllFiles(){
+  const files = Array.from(new Set(allRows.map(r=>r.file)));
+  files.forEach(renumberProductPrefixesPerFile);
+}
 
-document.getElementById('inputFiles').addEventListener('change', async function(e) { await handleFiles(e.target.files); });
+// === 이벤트 핸들러 초기화 ===
+inputFilesElem.addEventListener('change', async function(e) { await handleFiles(e.target.files); });
 document.getElementById('resetBtn').addEventListener('click', resetAll);
-document.getElementById('toggleOptionModeBtn').addEventListener('click', function(){
-  optionMode = !optionMode;
-  this.textContent = optionMode ? '색상,사이즈별 품절 ON' : '색상,사이즈별 품절 OFF';
-  if(optionMode) this.classList.add('on');
-  else this.classList.remove('on');
-  selectedCode = null;
-  updateCodeBtns();
-});
-
-// 재고 99999 적용 버튼
 document.getElementById('setAll99999Btn').addEventListener('click', setAllStock99999);
+modeSoldoutBtn.addEventListener('click', () => setMode('soldout'));
+modeEditBtn.addEventListener('click', () => setMode('edit'));
+downloadBtn.addEventListener('click', downloadFiles);
 
-// 상단 모드 스위치 버튼
-const modeSoldoutBtn = document.getElementById('modeSoldoutBtn');
-const modeEditBtn    = document.getElementById('modeEditBtn');
-
-modeSoldoutBtn.addEventListener('click', () => {
-  if (mode === 'soldout') return;
-  mode = 'soldout';
-  modeSoldoutBtn.classList.add('on');
-  modeEditBtn.classList.remove('on');
-
-  // 필요하면 편집 모드에서 비활성화했던 토글 되살리기
-  const tBtn = document.getElementById('toggleOptionModeBtn');
-  tBtn.disabled = false; // 선택사항
-
-  selectedCode = null;
-  updateCodeBtns();
+// 드래그 앤 드롭
+const fileDropZone = document.getElementById('fileDropZone');
+fileDropZone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); fileDropZone.classList.add('dragover'); });
+fileDropZone.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); fileDropZone.classList.remove('dragover'); });
+fileDropZone.addEventListener('drop', (e) => {
+  e.preventDefault(); e.stopPropagation();
+  fileDropZone.classList.remove('dragover');
+  if (e.dataTransfer.files.length) {
+    handleFiles(e.dataTransfer.files);
+  }
 });
 
-modeEditBtn.addEventListener('click', () => {
-  if (mode === 'edit') return;
-  mode = 'edit';
-  modeEditBtn.classList.add('on');
-  modeSoldoutBtn.classList.remove('on');
+// 바디 클릭 (패널 닫기)
+document.body.onclick = function(e) {
+  // 클릭된 요소가 3개 패널 중 하나의 자손인지 확인
+  const isInsideMain = e.target.closest('.main-area');
+  const isInsideContext = e.target.closest('.context-area');
+  const isInsideSide = e.target.closest('.side-area');
+  
+  // 세 패널 바깥의 회색 body 영역을 클릭했을 때만 닫힘
+  if (!isInsideMain && !isInsideContext && !isInsideSide) {
+    if (selectedCode !== null) {
+      selectedCode = null;
+      updateCodeBtns();
+      clearContextPanel();
+    }
+  }
+};
 
-  optionMode = true;
-  const tBtn = document.getElementById('toggleOptionModeBtn');
-  tBtn.classList.add('on');
-  tBtn.textContent = '색상,사이즈별 품절 ON';
-  tBtn.disabled = true; // 선택사항: 편집 모드에서는 토글 못 누르게
 
-  selectedCode = null;
-  updateCodeBtns();
-});
-
-
+// === 핵심 로직: 파일 처리 및 리셋 ===
 
 function resetAll() {
   fileList = []; fileDataArr = []; allRows = []; uniqueCodes = []; soldoutState = {}; selectedCode = null;
-  document.getElementById('fileNames').textContent = '';
-  document.getElementById('fileCount').textContent = '';
-  document.getElementById('inputFiles').value = '';
-  document.getElementById('prodCountInfo').textContent = '';
-  document.getElementById('codeBtnArea').innerHTML = '';
+  fileNamesElem.textContent = '';
+  fileCountElem.textContent = '';
+  inputFilesElem.value = '';
+  prodCountInfoElem.textContent = '';
+  codeBtnArea.innerHTML = '';
   updateSoldoutList();
-  document.getElementById('downloadBtn').disabled = true;
+  clearContextPanel();
+  downloadBtn.disabled = true;
+  setMode('soldout');
 }
 
 async function handleFiles(filelist) {
@@ -757,7 +772,6 @@ async function handleFiles(filelist) {
   updateProdCount();
   updateSoldoutList();
   let names = fileList.map(f=>f.name).join(', ');
-  let fileNamesElem = document.getElementById('fileNames');
   if (names.length > 45) {
     let split = names.split(',');
     let shown = split.slice(0,2).join(', ') + ' ...';
@@ -765,39 +779,9 @@ async function handleFiles(filelist) {
   } else {
     fileNamesElem.textContent = names;
   }
-  document.getElementById('fileCount').textContent = fileList.length > 1 ? `+${fileList.length}개` : '';
-  document.getElementById('downloadBtn').disabled = false;
+  fileCountElem.textContent = fileList.length > 1 ? `+${fileList.length}개` : '';
+  downloadBtn.disabled = false;
 }
-
-function setAllStock99999() {
-  if (!allRows.length) {
-    alert('먼저 파일을 업로드하세요.');
-    return;
-  }
-  const ok = confirm(
-    '모든 파일의 모든 행 재고를 99999로 설정합니다.\n' +
-    '※ 단종/품절로 지정된 항목은 다운로드 시 재고 0으로 적용됩니다.\n계속할까요?'
-  );
-  if (!ok) return;
-
-  // 모든 행의 재고수량을 99999로 세팅
-  for (const r of allRows) {
-    r['재고수량'] = 99999;
-  }
-
-  // 편집 팝업에 재고 숫자 칩이 보이는 상태라면 갱신
-  if (selectedCode) {
-    const listEl = document.getElementById(`optionList_${selectedCode}`);
-    if (listEl) listEl.innerHTML = renderOptionListHTML(selectedCode);
-  }
-
-  // 혼동 방지: 기존 체크박스는 꺼두는 게 직관적
-  const fillBox = document.getElementById('fillStockCheckbox');
-  if (fillBox) fillBox.checked = false;
-
-  alert('모든 재고를 99999로 설정했습니다.');
-}
-
 
 function readExcel(file) {
   return new Promise(resolve => {
@@ -823,10 +807,9 @@ function mergeAllRows() {
         ...row,
         file: name,
         관리코드: code,
-        _normCode: normCode(code)        // ★ 추가: 정규화된 코드
+        _normCode: normCode(code)
       });
       if (code) codeSet.add(code);
-
       if (typeof code === 'string' && code.trim().startsWith('단종')) {
         soldoutState[code] = { 전체: "discont", 복합: [] };
       }
@@ -835,56 +818,118 @@ function mergeAllRows() {
   uniqueCodes = Array.from(codeSet);
 }
 
-
-function updateCodeBtns() {
-  const area = document.getElementById('codeBtnArea');
-  area.innerHTML = '';
-  for (let code of uniqueCodes) {
-    if (!code) continue;
-    const wrap = document.createElement('div');
-    wrap.className = 'code-btn-wrap';
-    const btn = document.createElement('button');
-    btn.id = 'codeBtn_' + toSafeId(code);
-    btn.className = 'code-btn'; // 항상 초기화
-
-    // 상태 class 1개만!
-if (soldoutState[code]?.전체 === "discont") {
-  btn.classList.add('discont');
-} else if (soldoutState[code]?.전체 === "soldout") {
-  btn.classList.add('selected');
-} else if ((soldoutState[code]?.복합 || []).length > 0) {
-  btn.classList.add('has-soldout');
+function setAllStock99999() {
+  if (!allRows.length) { alert('먼저 파일을 업로드하세요.'); return; }
+  const ok = confirm(
+    '모든 파일의 모든 행 재고를 99999로 설정합니다.\n' +
+    '※ 단종/품절로 지정된 항목은 다운로드 시 재고 0으로 적용됩니다.\n계속할까요?'
+  );
+  if (!ok) return;
+  for (const r of allRows) { r['재고수량'] = 99999; }
+  const fillBox = document.getElementById('fillStockCheckbox');
+  if (fillBox) fillBox.checked = false;
+  
+  // 편집 패널이 열려있다면 갱신
+  if (selectedCode && mode === 'edit') {
+    renderContextPanel(selectedCode);
+  }
+  alert('모든 재고를 99999로 설정했습니다.');
 }
 
+function setMode(newMode) {
+  mode = newMode;
+  if (mode === 'soldout') {
+    modeSoldoutBtn.classList.add('on');
+    modeEditBtn.classList.remove('on');
+  } else {
+    modeSoldoutBtn.classList.remove('on');
+    modeEditBtn.classList.add('on');
+  }
+  // 모드 변경 시 선택된 코드 패널도 다시 렌더링
+  if (selectedCode) {
+    renderContextPanel(selectedCode);
+  } else {
+    clearContextPanel();
+  }
+}
 
+// === [수정] UI 렌더링 (1단: 코드 버튼) ===
 
-    // 선택된(팝업 오픈) 버튼은 boxShadow로만 강조, class 추가 X
-    if (selectedCode === code) btn.style.boxShadow = '0 0 0 2px #b5e9d6 inset';
-    else btn.style.boxShadow = '';
+function updateCodeBtns() {
+  codeBtnArea.innerHTML = '';
+  for (let code of uniqueCodes) {
+    if (!code) continue;
+    const btn = document.createElement('button');
+    btn.id = 'codeBtn_' + toSafeId(code);
+    btn.className = 'code-btn';
+
+    // 상태 클래스 적용
+    const state = soldoutState[code];
+    if (state?.전체 === "discont") {
+      btn.classList.add('is-discont-all');
+    } else if (state?.전체 === "soldout") {
+      btn.classList.add('is-soldout-all');
+    } else if ((state?.복합 || []).length > 0) {
+      btn.classList.add('has-soldout');
+    }
+
+    // 현재 선택된 버튼 (활성)
+    if (selectedCode === code) {
+      btn.classList.add('selected');
+    }
 
     btn.textContent = code;
+    
+    // [수정] 버튼 클릭 로직 단순화
     btn.onclick = (e) => {
       e.stopPropagation();
-      if (optionMode) {
-        selectedCode = code;
-        updateCodeBtns();
-      } else {
-        if (!soldoutState[code] || !soldoutState[code].전체) {
-          soldoutState[code] = { 전체: "soldout", 복합: [] };
-        } else if (soldoutState[code].전체 === "soldout") {
-          soldoutState[code].전체 = "discont";
-        } else if (soldoutState[code].전체 === "discont") {
-          soldoutState[code] = { 전체: false, 복합: [] };
-        }
+      if (selectedCode === code) {
+        // 이미 선택된 버튼 다시 클릭 -> 선택 해제
         selectedCode = null;
         updateCodeBtns();
-        updateSoldoutList();
+        clearContextPanel();
+      } else {
+        // 새 버튼 클릭 -> 선택
+        selectedCode = code;
+        updateCodeBtns(); // 버튼 목록 갱신 (하이라이트)
+        renderContextPanel(code); // 컨텍스트 패널 렌더링
       }
     };
+    codeBtnArea.appendChild(btn);
+  }
+}
 
-    wrap.appendChild(btn);
+// === [신규] UI 렌더링 (2단: 컨텍스트 패널) ===
 
-if (optionMode && selectedCode === code) {
+function clearContextPanel() {
+  contextArea.innerHTML = `
+    <div class="context-placeholder">
+      &larr; 왼쪽에서 관리코드를 선택하면<br>이곳에 상세 작업 패널이 나타납니다.
+    </div>`;
+  contextArea.style.borderColor = '#e8f0eb';
+  contextArea.style.background = '#fdfdfd';
+}
+
+function closeContextPanel() {
+  selectedCode = null;
+  updateCodeBtns();
+  clearContextPanel();
+}
+
+function renderContextPanel(code) {
+  contextArea.innerHTML = ''; // Clear
+  contextArea.style.borderColor = '#7ad4b3'; // Highlight panel
+  contextArea.style.background = '#fff';
+
+  if (mode === 'soldout') {
+    renderSoldoutPanel(contextArea, code);
+  } else {
+    renderEditPanel(contextArea, code);
+  }
+}
+
+// [신규] 2단: 품절 모드 패널 렌더링
+function renderSoldoutPanel(container, code) {
   const rows = rowsByCode(code);
   let colorSet = new Set(), sizeSet = new Set();
   rows.forEach(r => {
@@ -892,232 +937,471 @@ if (optionMode && selectedCode === code) {
     if (color && color !== "") colorSet.add(color);
     if (size && size !== "")  sizeSet.add(size);
   });
-  const colors = Array.from(colorSet).filter(x => x !== "");
-  const sizes  = Array.from(sizeSet).filter(x => x !== "");
+  const colors = Array.from(colorSet).filter(Boolean);
+  const sizes = Array.from(sizeSet).filter(Boolean).sort(compareSize);
 
-  if (mode === 'soldout') {
-    if (colors.length > 0 || sizes.length > 0) {
-      showOptionSelect(code, wrap, colors, sizes);
-    }
-  } else {
-    showOptionSelectForEdit(code, wrap, colors, sizes);
-  }
-}
+  const state = soldoutState[code];
+  const isAllSoldout = state?.전체 === 'soldout';
+  const isAllDiscont = state?.전체 === 'discont';
 
-
-    area.appendChild(wrap);
-  }
-  document.body.onclick = function() {
-    if (selectedCode !== null) {
-      selectedCode = null;
-      updateCodeBtns();
-    }
-  }
-}
-
-
-function showOptionSelect(code, wrapElem, colors, sizes) {
-  // 기존 팝업 DOM 제거
-  Array.from(wrapElem.querySelectorAll('.option-select-area.popup')).forEach(el => el.remove());
-
-  let box = document.createElement('div');
-  box.id = 'optionBox_' + toSafeId(code);
-  box.className = 'option-select-area popup';
-box.innerHTML = `
-    <div style="margin-bottom:5px;font-weight:500;font-size:13.3px;color:#2b7365">
-      품절로 처리할 색상/사이즈 옵션을 선택하세요.
+  let html = `
+    <h2>${code}</h2>
+    <div class="section-title">전체 옵션 처리</div>
+    <div class="control-grid">
+      <button class="switch-btn ${isAllSoldout ? 'on' : ''}" onclick="setAllSoldout('${code}')">
+        ${isAllSoldout ? '전체품절 (ON)' : '전체 품절'}
+      </button>
+      <button class="switch-btn ${isAllDiscont ? 'on' : ''}" style="background-color: ${isAllDiscont ? '#856ed9' : ''};" onclick="setAllDiscont('${code}')">
+        ${isAllDiscont ? '전체단종 (ON)' : '전체 단종'}
+      </button>
     </div>
 
-    <button class="reset-btn"
-            style="width:100%;margin-bottom:8px;"
+    <div class="section-title" style="margin-top: 20px;">개별 옵션 처리</div>
+    <div style="font-size:12.5px; color:#555; margin-bottom: 10px;">
+      (클릭 순환: 품절 &rarr; 단종 &rarr; 해제)
+    </div>
+    <div class="option-btn-grid" id="optionBtnGrid_${toSafeId(code)}">
+      </div>
+    
+    <button class="reset-btn" style="width:100%; margin: 20px 0 10px 0;"
             onclick="event.stopPropagation(); deleteCodeRows('${code}')">
-      이 관리코드 행 전체 삭제
+      ⚠️ 이 관리코드 행 전체 삭제
     </button>
+    <button class="panel-close-btn" onclick="event.stopPropagation(); closeContextPanel()">
+      닫기
+    </button>
+  `;
+  container.innerHTML = html;
 
-    <div id="optionBtnArea_${toSafeId(code)}"></div>
-    <button class="option-soldout-area" style="width:100%;" onclick="event.stopPropagation();hideOptionSelect('${code}')">닫기</button>
-`;
+  // --- 개별 옵션 버튼 생성 ---
+  const grid = container.querySelector(`#optionBtnGrid_${toSafeId(code)}`);
+  if (!grid) return;
 
-  setTimeout(() => {
-
-    let optArea = box.querySelector('#optionBtnArea_' + toSafeId(code));
-    if (!optArea) return;
-    const grid = document.createElement('div');
-    grid.className = 'option-btn-grid';
-
-    // 관리코드 전체 상태
-    const 전체상태 = soldoutState[code]?.전체;
-    const isAllSoldout = 전체상태 === "soldout";
-    const isAllDiscont = 전체상태 === "discont";
-
-    // 옵션별 상태 추출 함수
-    function getBtnClass(opt) {
-      if (!opt) return '';
-      if (opt.상태 === "discont") return 'discont';
-      if (opt.상태 === "soldout") return 'selected';
-      return '';
-    }
-      // 팝업 내부 버튼들의 표시 상태를 soldoutState 기준으로 리프레시
-  function refreshPopup() {
-    const 전체상태 = soldoutState[code]?.전체;
-    const isAllSoldout = 전체상태 === "soldout";
-    const isAllDiscont = 전체상태 === "discont";
-
-    grid.querySelectorAll('.option-btn').forEach(btn => {
-      const c = (btn.dataset.color || '').trim();
-      const s = (btn.dataset.size  || '').trim();
-      btn.classList.remove('selected','discont');
-
-      if (isAllSoldout) { btn.classList.add('selected'); return; }
-      if (isAllDiscont) { btn.classList.add('discont');  return; }
-
-      const st = getState(code, c || null, s || null);
-      if (st?.상태 === 'soldout') btn.classList.add('selected');
-      if (st?.상태 === 'discont') btn.classList.add('discont');
-    });
+  function getState(code, color, size) {
+    const arr = soldoutState[code]?.복합 || [];
+    const nc = (color ?? '').trim();
+    const ns = (size  ?? '').trim();
+    return arr.find(o => (o.색상 ?? '').trim() === nc && (o.사이즈 ?? '').trim() === ns);
   }
 
+  function createOptionBtn(color, size, label) {
+    const b = document.createElement('button');
+    b.className = 'option-btn';
+    b.textContent = label;
+    b.dataset.color = color || '';
+    b.dataset.size  = size  || '';
 
-    function getState(code, color, size) {
-      const arr = soldoutState[code]?.복합 || [];
-      const nc = (color ?? '').trim();
-      const ns = (size  ?? '').trim();
-      return arr.find(o => (o.색상 ?? '').trim() === nc && (o.사이즈 ?? '').trim() === ns);
+    // 초기 상태 도색
+    if (isAllSoldout) b.classList.add('selected');
+    else if (isAllDiscont) b.classList.add('discont');
+    else {
+      let opt = getState(code, color, size);
+      if (opt?.상태 === 'discont') b.classList.add('discont');
+      else if (opt?.상태 === 'soldout') b.classList.add('selected');
     }
 
-    // 옵션 버튼 생성
-function createOptionBtn(color, size, label) {
-  const b = document.createElement('button');
-  b.className = 'option-btn';
-  b.textContent = label;
-  b.dataset.color = color || '';
-  b.dataset.size  = size  || '';
+    b.onclick = (e) => {
+      e.stopPropagation();
+      soldoutState[code] = soldoutState[code] || { 전체: false, 복합: [] };
 
-  // 초기 상태 도색
-  let opt = getState(code, color, size);
-  let btnClass = getBtnClass(opt);
-  if (isAllSoldout) b.classList.add('selected');
-  else if (isAllDiscont) b.classList.add('discont');
-  else if (btnClass) b.classList.add(btnClass);
-
-  b.onclick = (e) => {
-    e.stopPropagation();
-    soldoutState[code] = soldoutState[code] || { 전체: false, 복합: [] };
-
-    // 전체 상태였으면 해제(개별로 전환)
-    if (soldoutState[code].전체 === "soldout" || soldoutState[code].전체 === "discont") {
-      soldoutState[code].전체 = false;
-    }
-
-    // 옵션별 상태 순환: 품절 → 단종 → 해제
-    let idx = (soldoutState[code].복합 || []).findIndex(o =>
-      (o.색상 === color || (!color && !o.색상)) &&
-      (o.사이즈 === size || (!size && !o.사이즈))
-    );
-
-    if (idx < 0) {
-      soldoutState[code].복합.push(
-        color && size ? { 색상: color, 사이즈: size, 상태: "soldout" }
-        : color ?      { 색상: color, 상태: "soldout" }
-                 :      { 사이즈: size, 상태: "soldout" }
-      );
-    } else if (soldoutState[code].복합[idx].상태 === "soldout") {
-      soldoutState[code].복합[idx].상태 = "discont";
-    } else {
-      soldoutState[code].복합.splice(idx, 1);
-    }
-
-    // 전체 승격 여부 계산 (전부 단종/전부 품절)
-    checkAndAutoSetAllOptionState(code);
-
-    // 팝업은 그대로, 표시만 갱신
-    refreshPopup();
-
-    // 사이드 리스트는 즉시 반영
-    updateSoldoutList();
-  };
-
-  grid.appendChild(b);
-}
-
-
-    // 색상+사이즈
-    if (colors.length && sizes.length) {
-      for (let color of colors) {
-        for (let size of sizes) {
-          createOptionBtn(color, size, `${color} / ${size}`);
-        }
+      // 전체 상태였으면 해제(개별로 전환)
+      if (soldoutState[code].전체 === "soldout" || soldoutState[code].전체 === "discont") {
+        soldoutState[code].전체 = false;
       }
-    } else if (colors.length) {
-      colors.forEach(color => {
-        createOptionBtn(color, '', color);   // 사이즈는 ''로 고정
-      });
-    } else if (sizes.length) {
-     sizes.forEach(size => {
-        createOptionBtn('', size, size);     // 색상은 ''로 고정
-      });
-    }
 
-    optArea.appendChild(grid);
-  }, 0);
-  wrapElem.appendChild(box);
-  box.onclick = function(e){ e.stopPropagation(); };
+      let idx = (soldoutState[code].복합 || []).findIndex(o =>
+        (o.색상 === color || (!color && !o.색상)) &&
+        (o.사이즈 === size || (!size && !o.사이즈))
+      );
+
+      if (idx < 0) { // 해제 -> 품절
+        soldoutState[code].복합.push(
+          color && size ? { 색상: color, 사이즈: size, 상태: "soldout" }
+          : color ?       { 색상: color, 상태: "soldout" }
+                  :       { 사이즈: size, 상태: "soldout" }
+        );
+      } else if (soldoutState[code].복합[idx].상태 === "soldout") { // 품절 -> 단종
+        soldoutState[code].복합[idx].상태 = "discont";
+      } else { // 단종 -> 해제
+        soldoutState[code].복합.splice(idx, 1);
+      }
+
+      checkAndAutoSetAllOptionState(code); // 전체 승격 여부 계산
+      updateSoldoutList(); // [3단] 갱신
+      updateCodeBtns();    // [1단] 갱신
+      renderSoldoutPanel(container, code); // [2단] 자신 갱신
+    };
+    grid.appendChild(b);
+  }
+
+  // 옵션 버튼 채우기
+  if (colors.length && sizes.length) {
+    colors.forEach(color => {
+      sizes.forEach(size => {
+        createOptionBtn(color, size, `${color} / ${size}`);
+      });
+    });
+  } else if (colors.length) {
+    colors.forEach(color => { createOptionBtn(color, '', color); });
+  } else if (sizes.length) {
+    sizes.forEach(size => { createOptionBtn('', size, size); });
+  } else {
+    grid.innerHTML = `<div class="opt-empty" style="grid-column: 1 / -1;">옵션을 찾을 수 없습니다.</div>`;
+  }
 }
 
+// [신규] 2단: 품절 모드용 헬퍼 함수
+function setAllSoldout(code) {
+  soldoutState[code] = soldoutState[code] || { 전체: false, 복합: [] };
+  if (soldoutState[code].전체 === 'soldout') {
+    soldoutState[code].전체 = false; // Toggle off
+  } else {
+    soldoutState[code].전체 = 'soldout'; // Set
+    soldoutState[code].복합 = []; // Clear individuals
+  }
+  updateSoldoutList();
+  updateCodeBtns();
+  renderContextPanel(code); // Re-render panel
+}
 
+function setAllDiscont(code) {
+  soldoutState[code] = soldoutState[code] || { 전체: false, 복합: [] };
+  if (soldoutState[code].전체 === 'discont') {
+    soldoutState[code].전체 = false; // Toggle off
+  } else {
+    soldoutState[code].전체 = 'discont'; // Set
+    soldoutState[code].복합 = []; // Clear individuals
+  }
+  updateSoldoutList();
+  updateCodeBtns();
+  renderContextPanel(code); // Re-render panel
+}
 
-// updateSoldoutList 함수 전체 교체!
+// [신규] 2단: 편집 모드 패널 렌더링
+function renderEditPanel(container, code) {
+  const rowsOnlyThisCode = rowsByCode(code);
+  const template = rowsOnlyThisCode[0] || {};
+  const hasSizeCol = Object.prototype.hasOwnProperty.call(template, '사이즈');
+
+  const boxHTML = `
+    <h2>${code}</h2>
+    <div class="section-title">새 옵션 추가</div>
+    
+    <div class="edit-form-area">
+      <div class="input-row">
+        <input type="text" id="newColor_${code}" placeholder="색상">
+        <input type="text" id="newSize_${code}" placeholder="${hasSizeCol ? '사이즈' : '사이즈 열 없음'}"
+               ${hasSizeCol ? '' : 'disabled'}>
+      </div>
+      <div class="input-row">
+        <input type="number" id="newStock_${code}" placeholder="재고수량(기본: 99999)" value="99999">
+      </div>
+      <button id="addBtn_${code}" class="add-btn">
+        + 추가
+      </button>
+      <div class="form-help">
+        • 색상만 입력 → 모든 기존 사이즈로 일괄 추가<br>
+        • 사이즈만 입력 → 모든 기존 색상으로 일괄 추가<br>
+        • 둘 다 입력 → 해당 조합 1개 추가/갱신
+      </div>
+    </div>
+
+    <div class="section-title" style="margin-top: 20px;">현재 옵션 목록</div>
+    <div id="optionList_${code}" class="option-list-container">
+      ${renderOptionListHTML(code)}
+    </div>
+
+    <button class="reset-btn" style="width:100%; margin: 20px 0 10px 0;"
+            onclick="event.stopPropagation(); deleteCodeRows('${code}')">
+      ⚠️ 이 관리코드 행 전체 삭제
+    </button>
+    <button class="panel-close-btn" onclick="event.stopPropagation(); closeContextPanel()">
+      닫기
+    </button>
+  `;
+  container.innerHTML = boxHTML;
+
+  // 추가 버튼 이벤트 바인딩
+  const addBtn = container.querySelector(`#addBtn_${cssEscapeId(code)}`) || container.querySelector(`#addBtn_${code}`);
+  if (addBtn) {
+    addBtn.onclick = (e) => {
+      e.stopPropagation();
+      addNewOption(code); // 옵션 추가 로직 실행
+      // addNewOption이 내부적으로 listEl을 갱신함
+    };
+  }
+}
+
+// [수정] 2단: 편집 모드 - 옵션 목록 HTML 생성 (기존 로직 유지)
+function renderOptionListHTML(code) {
+  const rowsForCode = rowsByCode(code);
+  if (!rowsForCode.length) return `<div class="opt-empty">옵션이 없습니다.</div>`;
+
+  const byFile = {};
+  rowsForCode.forEach(r => {
+    const ex = extractColorAndSize(r);
+    const file = r.file;
+    const color = (r['색상'] || ex.color || '').toString().trim() || '(색상없음)';
+    const size  = (r['사이즈'] || ex.size  || '').toString().trim()  || '(사이즈없음)';
+    const stock = r['재고수량'];
+    byFile[file] ??= {};
+    byFile[file][color] ??= [];
+    byFile[file][color].push({ row: r, color, size, stock });
+  });
+
+  let html = '';
+  Object.keys(byFile).sort().forEach(file => {
+    html += `
+      <div class="opt-file">
+        <div class="opt-file__title">${file}</div>
+    `;
+    const byColor = byFile[file];
+    Object.keys(byColor).sort((a,b)=>a.localeCompare(b,'ko')).forEach(color => {
+      const list = byColor[color].sort((a,b)=>compareSize(a.size, b.size));
+      html += `<div class="opt-color">
+        <div class="opt-color__title">${color}</div>
+        <div class="opt-sizes">`;
+      list.forEach(item => {
+        const zero = Number(item.stock) === 0;
+        html += `
+          <span class="size-chip ${zero ? 'is-zero' : ''}" title="재고: ${item.stock}">
+            ${item.size}
+            <em class="size-chip__stock">${item.stock}</em>
+          </span>`;
+      });
+      html += `</div></div>`;
+    });
+    html += `</div>`;
+  });
+  if (!html) html = `<div class="opt-empty">옵션이 없습니다.</div>`;
+  return html;
+}
+
+// === [수정] UI 렌더링 (3단: 요약 리스트) ===
+
 function updateSoldoutList() {
-  const ul = document.getElementById('soldoutList');
-  ul.innerHTML = '';
+  soldoutListUl.innerHTML = '';
   let any = false;
   for (let code of uniqueCodes) {
     if (soldoutState[code]?.전체 === "discont") {
-      ul.innerHTML += `<li><b>${code}</b> <span style="color:#533e8e;font-weight:700;">전체단종</span></li>`;
+      soldoutListUl.innerHTML += `<li><b>${code}</b> <span style="color:#533e8e;font-weight:700;">전체단종</span></li>`;
       any = true;
     } else if (soldoutState[code]?.전체 === "soldout") {
-      ul.innerHTML += `<li><b>${code}</b> <span style="color:#606060;font-weight:700;">전체품절</span></li>`;
+      soldoutListUl.innerHTML += `<li><b>${code}</b> <span style="color:#606060;font-weight:700;">전체품절</span></li>`;
       any = true;
     } else if ((soldoutState[code]?.복합||[]).length > 0) {
       for (let opt of soldoutState[code].복합) {
         let stateLabel = opt.상태 === "discont" ? '<span style="color:#533e8e;font-weight:700;">단종</span>' : '품절';
-        ul.innerHTML += `<li><b>${code}</b> ${opt.색상?opt.색상+'/':''}${opt.사이즈||''} ${stateLabel}</li>`;
+        soldoutListUl.innerHTML += `<li><b>${code}</b> ${opt.색상?opt.색상+'/':''}${opt.사이즈||''} ${stateLabel}</li>`;
         any = true;
       }
     }
   }
-  if (!any) ul.innerHTML = `<li style="color:#b5b5b5;">(선택내역 없음)</li>`;
+  if (!any) soldoutListUl.innerHTML = `<li style="color:#b5b5b5;">(선택내역 없음)</li>`;
 }
 
+// === [수정] 핵심 로직 (옵션 추가, 삭제, 다운로드) ===
 
-document.getElementById('downloadBtn').addEventListener('click', async function () {
-  // 1) 검증 요약
+// [수정] addNewOption: 팝업 대신 패널 내부 리스트 갱신
+function addNewOption(code) {
+  const colorInput = document.getElementById(`newColor_${code}`).value.trim();
+  const sizeInput  = document.getElementById(`newSize_${code}`)?.value.trim() || '';
+  const stock      = parseInt(document.getElementById(`newStock_${code}`).value.trim(), 10) || 99999;
+  if (!colorInput && !sizeInput) { alert("색상 또는 사이즈 중 최소 하나는 입력하세요."); return; }
+
+  const listForCode = rowsByCode(code);
+  const filesForCode = Array.from(new Set(listForCode.map(r => r.file)));
+
+  filesForCode.forEach(fileName => {
+    const template = listForCode.find(r => r.file === fileName);
+    if (!template) return;
+
+    const pattern = detectSizeDisplayPatternForCodeFile(code, fileName);
+    const useColorInLabel = labelHasColorForCodeInFile(code, fileName);
+    const useSizeInLabel  = (() => {
+      const tokens = labelToTokens(template);
+      return tokens.some(isSizeToken);
+    })();
+
+    const colorsToUse = colorInput
+      ? [colorInput]
+      : (Array.from(new Set(
+          allRows
+            .filter(r => r.file === fileName && r.관리코드 === code)
+            .map(r => r['색상'] || extractColorAndSize(r).color || '')
+            .filter(Boolean)
+        )) || ['']);
+
+    let sizesToUse;
+    if (sizeInput) sizesToUse = [sizeInput];
+    else {
+      const inFileRows = allRows.filter(r => r.file === fileName && r.관리코드 === code);
+      const fromPattern = inFileRows.map(r => pattern.parse(r)).filter(Boolean);
+      sizesToUse = fromPattern.length ? Array.from(new Set(fromPattern)) : [''];
+    }
+    sizesToUse = [...sizesToUse].sort(compareSize);
+
+    colorsToUse.forEach(col => {
+      sizesToUse.forEach(sz => {
+        let labelValue = (template['제품선택'] || template['추가상품값'] || '').toString();
+        if (useColorInLabel && col) labelValue = buildLabelInsertColorAfterProductForCodeFile(code, fileName, template, col);
+        if (useSizeInLabel && sz)  labelValue = replaceLastSizeTokenInLabel(labelValue, sz);
+
+        const existIdx = allRows.findIndex(r => {
+          if (r.file !== fileName || r.관리코드 !== code) return false;
+          if (!rowHasColorWithPattern(r, col, pattern)) return false;
+          const existingSize = pattern.parse(r);
+          return (existingSize || '') === (sz || '');
+        });
+
+        if (existIdx >= 0) {
+          const row = allRows[existIdx];
+          row['재고수량'] = stock;
+          if (pattern.column === '사이즈') {
+            if ('사이즈' in row) row['사이즈'] = pattern.format(sz || '');
+            if ('색상' in row && !useColorInLabel) row['색상'] = col || row['색상'];
+          } else if (pattern.column === '색상') {
+            if ('색상' in row) row['색상'] = pattern.format(sz);
+          }
+          if ('제품선택'    in row) row['제품선택']    = labelValue;
+          if ('추가상품값' in row) row['추가상품값'] = labelValue;
+        } else {
+          const newRow = { ...template };
+          newRow['관리코드'] = code;
+          if ('상품코드' in newRow) newRow['상품코드'] = code;
+          if ('코드'     in newRow) newRow['코드']     = code;
+          newRow._normCode = normCode(code);
+          newRow['재고수량'] = stock;
+          newRow.file = fileName;
+
+          if (pattern.column === '사이즈') {
+            if ('사이즈' in newRow) newRow['사이즈'] = pattern.format(sz || '');
+            if ('색상' in newRow && !useColorInLabel) newRow['색상'] = col || (newRow['색상'] || '');
+          } else if (pattern.column === '색상') {
+            if ('색상' in newRow) newRow['색상'] = pattern.format(sz);
+          }
+          if ('제품선택'    in newRow) newRow['제품선택']    = labelValue;
+          if ('추가상품값' in newRow) newRow['추가상품값'] = labelValue;
+
+          const lastSameColorIdx = findLastIndex(allRows, r => {
+            if (r.file !== fileName || r.관리코드 !== code) return false;
+            return rowHasColorWithPattern(r, col, pattern);
+          });
+          const lastCodeIdx = findLastIndex(allRows, r => r.file === fileName && r.관리코드 === code);
+          const insertAt = (lastSameColorIdx >= 0 ? lastSameColorIdx : lastCodeIdx) + 1;
+          allRows.splice(insertAt, 0, newRow);
+        }
+      });
+      reorderColorBlock(fileName, code, col, detectSizeDisplayPatternForCodeFile(code, fileName));
+    });
+  });
+
+  // UI 갱신
+  const listEl = document.getElementById(`optionList_${code}`);
+  if (listEl) {
+    listEl.innerHTML = renderOptionListHTML(code);
+  }
+  const cEl  = document.getElementById(`newColor_${code}`);
+  const sEl  = document.getElementById(`newSize_${code}`);
+  const stEl = document.getElementById(`newStock_${code}`);
+  if (cEl) cEl.value = '';
+  if (sEl) sEl.value = '';
+  if (stEl) stEl.value = '99999';
+}
+
+// [수정] deleteCodeRows: 패널 닫기 추가
+function deleteCodeRows(code) {
+  const target = normCode(code);
+  const before = allRows.length;
+  if (!confirm(`관리코드 "${code}"에 해당하는 모든 행을 삭제할까요?\n\n⚠️ 되돌리기는 새로고침 전까지 불가합니다.`)) {
+    return;
+  }
+
+  allRows = allRows.filter(r => (
+    normCode(r['관리코드']) !== target &&
+    normCode(r['상품코드']) !== target &&
+    normCode(r['코드'])       !== target
+  ));
+
+  delete soldoutState[code];
+  const set = new Set();
+  allRows.forEach(r => {
+    const c = r['관리코드'] || r['상품코드'] || r['코드'] || '';
+    if (c) set.add(c);
+  });
+  uniqueCodes = Array.from(set);
+
+  renumberAllFiles();
+  selectedCode = null;
+  updateCodeBtns();    // [1단] 갱신
+  clearContextPanel(); // [2단] 갱신
+  updateProdCount();
+  updateSoldoutList(); // [3단] 갱신
+
+  alert(`삭제 완료: ${before - allRows.length}개 행`);
+}
+
+// [수정] checkAndAutoSetAllOptionState: UI 갱신 로직 제거 (상위 호출자가 담당)
+function checkAndAutoSetAllOptionState(code) {
+  const rows = rowsByCode(code);
+  const totalCnt = rows.length;
+  let soldoutCnt = 0, discontCnt = 0;
+  soldoutState[code] = soldoutState[code] || { 전체: false, 복합: [] };
+  const isMatch = (opt, color, size) => {
+    const oc = (opt.색상 ?? '').trim();
+    const os = (opt.사이즈 ?? '').trim();
+    const rc = (color ?? '').trim();
+    const rs = (size  ?? '').trim();
+    const colorOK = (oc === '' || oc === rc);
+    const sizeOK  = (os === '' || os === rs);
+    return colorOK && sizeOK;
+  };
+  for (const r of rows) {
+    const { color, size } = extractColorAndSize(r);
+    const match = (soldoutState[code].복합 || []).find(o => isMatch(o, color, size));
+    if (match) {
+      if (match.상태 === 'discont') discontCnt++;
+      else if (match.상태 === 'soldout') soldoutCnt++;
+    }
+  }
+  if (totalCnt > 0 && discontCnt === totalCnt) {
+    soldoutState[code].전체 = 'discont';
+    soldoutState[code].복합 = [];
+  } else if (totalCnt > 0 && (soldoutCnt + discontCnt) === totalCnt) {
+    soldoutState[code].전체 = 'soldout';
+    soldoutState[code].복합 = [];
+  } else {
+    soldoutState[code].전체 = false;
+  }
+  // UI 갱신은 이 함수를 호출한 곳(예: 버튼 클릭 핸들러)에서 수행
+}
+
+function updateProdCount() {
+  prodCountInfoElem.textContent = uniqueCodes.length
+    ? `총 ${uniqueCodes.length}개 관리코드` : '';
+}
+
+// [수정] downloadFiles: 함수명 변경 및 기존 로직 유지
+async function downloadFiles() {
   const report = buildValidationReport();
   const msg = formatValidationSummary(report);
   if (report.totals.issues > 0) {
     if (!confirm(msg)) return;
   }
-
-  // 2) 준비
   const fillStock = document.getElementById('fillStockCheckbox').checked;
   if (typeof JSZip === 'undefined') {
     alert('JSZip 로드에 실패했습니다. 인터넷 연결/스크립트 경로를 확인하세요.');
     return;
   }
   const mainZip = new JSZip();
-
-
-  // 3) 관리코드별 옵션 현황 계산
   const codeOptionCount = {};
   for (const row of allRows) {
     const code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
     if (!code) continue;
     codeOptionCount[code] ??= { total: 0, soldout: 0, discont: 0 };
     codeOptionCount[code].total++;
-
     const target = soldoutState[code];
     let isSoldout = false, isDiscont = false;
-
     if ((target?.복합 || []).length > 0) {
       const { color, size } = extractColorAndSize(row);
       for (const opt of target.복합) {
@@ -1131,12 +1415,9 @@ document.getElementById('downloadBtn').addEventListener('click', async function 
     }
     if (target?.전체 === 'discont') isDiscont = true;
     else if (target?.전체 === 'soldout') isSoldout = true;
-
     if (isDiscont) codeOptionCount[code].discont++;
     else if (isSoldout) codeOptionCount[code].soldout++;
   }
-
-  // 4) 전부 품절/단종 → 전체 상태 승격
   for (const code in codeOptionCount) {
     const stat = codeOptionCount[code];
     if (stat.discont === stat.total) {
@@ -1151,23 +1432,18 @@ document.getElementById('downloadBtn').addEventListener('click', async function 
       }
     }
   }
-// 4.9) 최종 파일 생성 전에 순번 재정렬/재채번
   renumberAllFiles();
-
- // 5) 파일별로 시트 생성해서 ZIP에 담기
   const rowsByFile = {};
   for (const r of allRows) {
     const fname = r.file || '편집추가.xlsx';
     (rowsByFile[fname] ??= []).push(r);
   }
-
   for (const name in rowsByFile) {
     const data = rowsByFile[name];
     const newData = data.map(row => {
       const codeKey = getCodeKey(row);
       const code = codeKey ? row[codeKey] : '';
       const target = soldoutState[code];
-
       let isSoldout = false, isDiscont = false;
       if ((target?.복합 || []).length > 0) {
         const { color, size } = extractColorAndSize(row);
@@ -1182,7 +1458,6 @@ document.getElementById('downloadBtn').addEventListener('click', async function 
       }
       if (target?.전체 === 'discont') isDiscont = true;
       else if (target?.전체 === 'soldout') isSoldout = true;
-
       const rowCopy = { ...row };
       if (isDiscont) {
         if (codeKey) rowCopy[codeKey] = makeDiscontCode(rowCopy[codeKey]);
@@ -1195,651 +1470,19 @@ document.getElementById('downloadBtn').addEventListener('click', async function 
       } else if (fillStock && (!rowCopy['재고수량'] || rowCopy['재고수량'] == 0)) {
         rowCopy['재고수량'] = 99999;
       }
-
       delete rowCopy.file;
       delete rowCopy._normCode;
       return rowCopy;
     });
-
     const ws = XLSX.utils.json_to_sheet(newData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
     const xlsBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-
     const outName = name.endsWith('.xlsx') ? name : name.replace(/\.xls$/i, '.xlsx');
     mainZip.file(outName, xlsBlob);
   }
-
-  // 6) ZIP 다운로드
   const outBlob = await mainZip.generateAsync({ type: 'blob' });
   saveAs(outBlob, '품절처리_일괄다운로드.zip');
-});
-
-function updateProdCount() {
-  document.getElementById('prodCountInfo').textContent = uniqueCodes.length
-    ? `총 ${uniqueCodes.length}개 선택됨` : '';
-}
-
-const fileDropZone = document.getElementById('fileDropZone');
-fileDropZone.addEventListener('dragover', function(e) {
-  e.preventDefault();
-  e.stopPropagation();
-  fileDropZone.classList.add('dragover');
-});
-fileDropZone.addEventListener('dragleave', function(e) {
-  e.preventDefault();
-  e.stopPropagation();
-  fileDropZone.classList.remove('dragover');
-});
-fileDropZone.addEventListener('drop', function(e) {
-  e.preventDefault();
-  e.stopPropagation();
-  fileDropZone.classList.remove('dragover');
-  const files = e.dataTransfer.files;
-  if (files.length) {
-    handleFiles(files);
-  }
-});
-function checkAndAutoSetAllOptionState(code) {
-  // 대상 관리코드 행 모으기
-const rows = rowsByCode(code);
-  const totalCnt = rows.length;
-  let soldoutCnt = 0, discontCnt = 0;
-
-  // 상태 컨테이너 보정
-  soldoutState[code] = soldoutState[code] || { 전체: false, 복합: [] };
-
-  // 와일드카드 매칭: 옵션에 저장된 색상/사이즈가 '' 이면 그 축은 모두 매칭
-  const isMatch = (opt, color, size) => {
-    const oc = (opt.색상 ?? '').trim();
-    const os = (opt.사이즈 ?? '').trim();
-    const rc = (color ?? '').trim();
-    const rs = (size  ?? '').trim();
-    const colorOK = (oc === '' || oc === rc);
-    const sizeOK  = (os === '' || os === rs);
-    return colorOK && sizeOK;
-  };
-
-  // 각 행 상태 집계
-  for (const r of rows) {
-    const { color, size } = extractColorAndSize(r);
-    const match = (soldoutState[code].복합 || []).find(o => isMatch(o, color, size));
-    if (match) {
-      if (match.상태 === 'discont') discontCnt++;
-      else if (match.상태 === 'soldout') soldoutCnt++;
-    }
-  }
-
-  // 승격: 전부 단종 → 전체단종 / 전부 품절 → 전체품절 / 혼합이면 승격 안 함
-  if (totalCnt > 0 && discontCnt === totalCnt) {
-    soldoutState[code].전체 = 'discont';
-    soldoutState[code].복합 = [];
-  } else if (totalCnt > 0 && soldoutCnt === totalCnt) {
-    soldoutState[code].전체 = 'soldout';
-    soldoutState[code].복합 = [];
-  } else {
-    soldoutState[code].전체 = false;
-  }
-
-  // 사이드 리스트만 갱신 (코드버튼 전체 리렌더는 팝업 클릭 중엔 금지)
-  updateSoldoutList();
-
-}
-
-function hideOptionSelect(code) {
-  let box = document.getElementById('optionBox_' + toSafeId(code));
-  if (box) box.remove();
-  selectedCode = null;
-  updateCodeBtns();
-}
-
-// REPLACE: showOptionSelectForEdit
-function showOptionSelectForEdit(code, wrapElem, colors, sizes) {
-  // 같은 코드의 기존 편집 팝업 제거
-  Array.from(wrapElem.querySelectorAll('.option-select-area.popup')).forEach(el => el.remove());
-
-  // ✅ 이 함수 내부에서 '해당 코드' 행만 다시 필터링 (다른 코드 섞임 방지)
-  const rowsOnlyThisCode = rowsByCode(code);
-
-  // 템플릿/컬럼 유무 결정도 오직 이 코드에서만
-  const template = rowsOnlyThisCode[0] || {};
-  const hasSizeCol = Object.prototype.hasOwnProperty.call(template, '사이즈');
-
-  // (안전) 색상/사이즈 목록도 이 코드 행들에서 다시 추출
-  const colorSet = new Set();
-  const sizeSet  = new Set();
-  rowsOnlyThisCode.forEach(r => {
-    const { color, size } = extractColorAndSize(r);
-    if (color) colorSet.add(color.trim());
-    if (size)  sizeSet.add(size.trim());
-  });
-  const colorsSafe = Array.from(colorSet);
-  const sizesSafe  = Array.from(sizeSet);
-
-  // 팝업 DOM
-  const box = document.createElement('div');
-  box.id = 'editOptionBox_' + toSafeId(code);
-  box.className = 'option-select-area popup';
-  box.style.minWidth = '380px';
-box.innerHTML = `
-    <div style="margin-bottom:8px;font-weight:600;font-size:14px;color:#2b7365">
-      옵션 편집 모드 – <span style="color:#146f58">${code}</span>
-    </div>
-
-    <button class="reset-btn"
-            style="width:100%;margin:6px 0 10px 0;"
-            onclick="event.stopPropagation(); deleteCodeRows('${code}')">
-      이 관리코드 행 전체 삭제
-    </button>
-
-    <!-- 신규 옵션 추가 -->
-    <div style="padding:8px;border:1px solid #cfe3d8;border-radius:8px;margin-bottom:10px;">
-      <div style="font-size:12px;color:#547a6b;margin-bottom:6px;">새 옵션 추가</div>
-
-      <div style="display:flex;gap:6px;margin-bottom:6px;">
-        <input type="text" id="newColor_${code}" placeholder="색상" style="flex:1;padding:4px;font-size:12px;">
-        <input type="text" id="newSize_${code}" placeholder="${hasSizeCol ? '사이즈' : '사이즈 열 없음'}"
-               ${hasSizeCol ? '' : 'disabled'} style="flex:1;padding:4px;font-size:12px;">
-      </div>
-
-      <div style="display:flex;gap:6px;margin-bottom:8px;">
-        <input type="number" id="newStock_${code}" placeholder="재고수량(기본: 99999)"
-               value="99999" style="flex:1;padding:4px;font-size:12px;">
-      </div>
-
-      <button id="addBtn_${code}"
-        style="width:100%;padding:6px;font-size:13px;background:#2b7365;color:#fff;border:none;border-radius:4px;cursor:pointer;">
-        + 추가
-      </button>
-
-      <div style="margin-top:6px;font-size:11px;color:#7a8d84;line-height:1.4;">
-        • 색상만 입력하면 → 해당 코드의 <b>모든 기존 사이즈</b>로 일괄 추가<br>
-        • 사이즈만 입력하면 → 해당 코드의 <b>모든 기존 색상</b>으로 일괄 추가<br>
-        • 색상+사이즈 모두 입력 → 해당 조합 1개 추가/갱신<br>
-        • 재고수량 미입력 시 기본 99999 적용
-      </div>
-    </div>
-
-    <!-- 기존 옵션 목록 -->
-    <div style="font-size:12px;color:#547a6b;margin-bottom:4px;">현재 옵션 목록</div>
-    <div id="optionList_${code}" style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow:auto;">
-      ${renderOptionListHTML(code)}
-    </div>
-
-    <button class="option-soldout-area" style="width:100%;margin-top:8px;"
-            onclick="event.stopPropagation();hideOptionSelect('${code}')">닫기</button>
-  `;
-
-  wrapElem.appendChild(box);
-  box.onclick = (e) => e.stopPropagation();
-
-  // 추가 버튼 이벤트
-  const addBtn = box.querySelector(`#addBtn_${cssEscapeId(code)}`) || box.querySelector(`#addBtn_${code}`);
-  if (addBtn) {
-    addBtn.onclick = (e) => {
-      e.stopPropagation();
-      addNewOption(code);
-      const listEl = document.getElementById(`optionList_${code}`);
-      if (listEl) listEl.innerHTML = renderOptionListHTML(code);
-    };
-  }
-}
-
-
-// 내부에서 id 선택 시 특수문자 이슈를 줄이기 위한 보조 함수 (안전하지 않은 코드값 대비)
-function cssEscapeId(raw) {
-  // 간단 escape: 공백/특수문자 -> 백슬래시 이스케이프
-  return String(raw).replace(/([ #;?%&,.+*~\':"!^$[\]()=>|\/@])/g, '\\$1');
-}
-
-
-function renderOptionListHTML(code) {
-  // ✅ 혹시 모를 누수 방지: 여기에서도 rowsByCode로 강제 필터
-  const rowsForCode = rowsByCode(code);
-  if (!rowsForCode.length) return `<div class="opt-empty">옵션이 없습니다.</div>`;
-  // (나머지 기존 로직 그대로 유지)
-
-
-
-  // 파일별 → 색상별 → 사이즈 오름차순으로 묶기
-  const byFile = {};
-  rowsForCode.forEach(r => {
-    const ex = extractColorAndSize(r);
-    const file = r.file;
-    const color = (r['색상'] || ex.color || '').toString().trim() || '(색상없음)';
-    const size  = (r['사이즈'] || ex.size  || '').toString().trim()  || '(사이즈없음)';
-    const stock = r['재고수량'];
-
-    byFile[file] ??= {};
-    byFile[file][color] ??= [];
-    byFile[file][color].push({ row: r, color, size, stock });
-  });
-
-  // 출력
-  let html = '';
-  Object.keys(byFile).forEach(file => {
-    html += `
-      <div class="opt-file">
-        <div class="opt-file__title">${file}</div>
-    `;
-    const byColor = byFile[file];
-
-    Object.keys(byColor).sort((a,b)=>a.localeCompare(b,'ko')).forEach(color => {
-      // 사이즈 정렬
-      const list = byColor[color].sort((a,b)=>compareSize(a.size, b.size));
-
-      html += `<div class="opt-color">
-        <div class="opt-color__title">${color}</div>
-        <div class="opt-sizes">`;
-
-      list.forEach(item => {
-        const zero = Number(item.stock) === 0;
-        html += `
-          <span class="size-chip ${zero ? 'is-zero' : ''}"
-                title="재고: ${item.stock}">
-            ${item.size}
-            <em class="size-chip__stock">${item.stock}</em>
-          </span>`;
-      });
-
-      html += `</div></div>`; // .opt-sizes, .opt-color
-    });
-
-    html += `</div>`; // .opt-file
-  });
-
-  if (!html) {
-    html = `<div class="opt-empty">옵션이 없습니다.</div>`;
-  }
-  return html;
-}
-
-function removeOption(code, color, size) {
-  const key = normCode(code);
-  allRows = allRows.filter(r => {
-    if (r._normCode !== key) return true;
-    const cs = extractColorAndSize(r);
-    return !((cs.color || '') === color && (cs.size || '') === size);
-  });
-  document.getElementById(`optionList_${code}`).innerHTML = renderOptionListHTML(code);
-}
-
-
-
-// 템플릿 라벨의 끝 "색상/사이즈" 토큰을 지우고 새 색상만 붙이는 함수
-function buildProductTextFromTemplate(tplRow, newColor) {
-  const raw = (tplRow['제품선택'] || tplRow['추가상품값'] || '').toString();
-  const tokens = raw.split('/').map(s => s.trim()).filter(Boolean);
-  if (!tokens.length) return newColor || '';
-
-  // 컬럼값이 비어있을 때를 대비해 라벨에서 추정
-  const guess = extractColorAndSize(tplRow);
-  const tplColor = (tplRow['색상']  || guess.color || '').toString().trim();
-  const tplSize  = (tplRow['사이즈']|| guess.size  || '').toString().trim();
-
-  const isSizeToken = v => /^(FREE|XS|S|M|L|XL|XXL|\d{2,3})$/i.test(v);
-  const eq = (a,b) => a && b && a.toUpperCase() === b.toUpperCase();
-
-  let cut = tokens.length;
-  const last = tokens[cut - 1];
-  const prev = tokens[cut - 2];
-
-  // … / (색상) / (사이즈)
-  if (cut >= 2 && (eq(last, tplSize) || isSizeToken(last)) && eq(prev, tplColor)) {
-    cut -= 2;
-  // … / (색상)
-  } else if (cut >= 1 && eq(last, tplColor)) {
-    cut -= 1;
-  // … / (사이즈) 만
-  } else if (cut >= 1 && isSizeToken(last)) {
-    cut -= 1;
-  }
-
-  // 추가 방어: 잘라낸 뒤에도 끝이 기존 색상이면 한 번 더 제거
-  let prefix = tokens.slice(0, cut);
-  if (prefix.length && eq(prefix[prefix.length - 1], tplColor)) {
-    prefix = prefix.slice(0, -1);
-  }
-
-  // 라벨에는 새 "색상"만 붙임 (사이즈는 컬럼에 존재하므로 라벨에 중복 금지)
-  return [...prefix, (newColor || tplColor)].filter(Boolean).join(' / ');
-}
-
-function getSizesByCode(code) {
-  const set = new Set();
-  allRows
-    .filter(r => r.관리코드 === code)
-    .forEach(r => {
-      const { size } = extractColorAndSize(r);
-      if (size) set.add(size.trim());
-    });
-  return Array.from(set);
-}
-// 해당 관리코드의 "기존 색상" 목록을 중복 없이 반환
-function getColorsByCode(code) {
-  const set = new Set();
-  allRows
-    .filter(r => r.관리코드 === code)
-    .forEach(r => {
-      const { color } = extractColorAndSize(r);
-      if (color) set.add(color.trim());
-    });
-  return Array.from(set);
-}
-// 라벨(제품선택/추가상품값)에서 끝의 [사이즈]와 [색상]을 지우고 새 색상만 붙임
-function buildProductTextFromTemplateForCode(code, tplRow, newColor) {
-  const raw = (tplRow['제품선택'] || tplRow['추가상품값'] || '').toString();
-  const tokens = raw.split('/').map(s => s.trim()).filter(Boolean);
-
-  const isSize = v => /^(FREE|XS|S|M|L|XL|XXL|\d{2,3})$/i.test(v);
-  const colorSet = new Set(getColorsByCode(code).map(c => c.toUpperCase()));
-
-  // 1) 끝이 사이즈면 제거
-  if (tokens.length && isSize(tokens[tokens.length - 1])) tokens.pop();
-  // 2) 끝이 '이 코드에서 쓰는 색상'이면 제거
-  if (tokens.length && colorSet.has(tokens[tokens.length - 1].toUpperCase())) tokens.pop();
-
-  tokens.push(newColor);
-  return tokens.join(' / ');
-}
-
-// 행 안에서 실제 코드 컬럼 키 찾기(관리코드/상품코드/코드 중 존재하는 것)
-function getCodeKey(row) {
-  const norm = s => String(s).replace(/\s/g, '').toLowerCase();
-  const keys = Object.keys(row || {});
-  const find = want => keys.find(k => norm(k) === norm(want));
-  return find('관리코드') || find('상품코드') || find('코드') || null;
-}
-
-// 행들을 "실제 코드 컬럼 값"으로 필터링
-// ✅ 관리코드 비교를 완전히 안전하게(공백/대소문자/다른 컬럼 케이스 포함)
-// REPLACE: rowsByCode
-function rowsByCode(code) {
-  const target = normCode(code);
-  return allRows.filter(r => (
-    normCode(r['관리코드']) === target ||
-    normCode(r['상품코드']) === target ||
-    normCode(r['코드'])     === target
-  ));
-}
-
-
-
-
-
-// '단종 ' 프리픽스 만들기(중복 방지 + 20자 제한 유지)
-function makeDiscontCode(origin) {
-  let base = String(origin || '').replace(/^(단종\s*)+/g, '').trim();
-  let out = '단종 ' + base;
-  if (out.length > 20) {
-    const compact = out.replace(/\s+/g, '');
-    out = '단종' + compact.slice(2);
-    if (out.length > 20) out = out.slice(0, 20);
-  }
-  return out;
-}
-
-// 보조: 뒤에서부터 조건에 맞는 인덱스 찾기
-function findLastIndex(arr, pred){
-  for (let i = arr.length - 1; i >= 0; i--) if (pred(arr[i], i, arr)) return i;
-  return -1;
-}
-
-// ★ 최종 교체본: 패턴 감지 + 중복 방지 + 접미사 보존 + 색상블록 정렬
-function addNewOption(code) {
-  const colorInput = document.getElementById(`newColor_${code}`).value.trim();
-  const sizeInput  = document.getElementById(`newSize_${code}`)?.value.trim() || '';
-  const stock      = parseInt(document.getElementById(`newStock_${code}`).value.trim(), 10) || 99999;
-
-  if (!colorInput && !sizeInput) {
-    alert("색상 또는 사이즈 중 최소 하나는 입력하세요.");
-    return;
-  }
-
-const listForCode = rowsByCode(code);   // 해당 관리코드 행만 필터링
-
-// 이 코드에서 쓰인 파일만 추출
-const filesForCode = Array.from(new Set(
-  listForCode.map(r => r.file)
-));
-
-filesForCode.forEach(fileName => {
-  // 같은 코드 + 같은 파일에서만 템플릿 찾기
-  const template = listForCode.find(r => r.file === fileName);
-  if (!template) return;
-
-    // ① 이 파일+코드의 표시 규칙 감지
-    const pattern = detectSizeDisplayPatternForCodeFile(code, fileName);
-    const useColorInLabel = labelHasColorForCodeInFile(code, fileName);
-    const useSizeInLabel  = (() => {
-      const tokens = labelToTokens(template);
-      return tokens.some(isSizeToken);
-    })();
-
-    // ② 추가할 색상/사이즈 집합
-const colorsToUse = colorInput
-  ? [colorInput]
-  : (Array.from(new Set(
-      allRows
-        .filter(r => r.file === fileName && r.관리코드 === code)
-        .map(r => {
-          // 색상 필드 우선 → 없으면 라벨에서 추출
-          return r['색상'] || extractColorAndSize(r).color || '';
-        })
-        .filter(Boolean)
-    )) || ['']);
-
-
-    let sizesToUse;
-    if (sizeInput) sizesToUse = [sizeInput];
-    else {
-      const inFileRows = allRows.filter(r => r.file === fileName && r.관리코드 === code);
-      const fromPattern = inFileRows.map(r => pattern.parse(r)).filter(Boolean);
-      sizesToUse = fromPattern.length ? Array.from(new Set(fromPattern)) : [''];
-    }
-    sizesToUse = [...sizesToUse].sort(compareSize); // 오름차순 정렬
-
-    // ③ 생성/업데이트
-    colorsToUse.forEach(col => {
-      sizesToUse.forEach(sz => {
-        // 라벨 생성
-        let labelValue = (template['제품선택'] || template['추가상품값'] || '').toString();
-        if (useColorInLabel && col) labelValue = buildLabelInsertColorAfterProductForCodeFile(code, fileName, template, col);
-        if (useSizeInLabel && sz)  labelValue = replaceLastSizeTokenInLabel(labelValue, sz);
-
-        // 기존 존재 여부
-        const existIdx = allRows.findIndex(r => {
-          if (r.file !== fileName || r.관리코드 !== code) return false;
-          if (!rowHasColorWithPattern(r, col, pattern)) return false;
-          const existingSize = pattern.parse(r);
-          return (existingSize || '') === (sz || '');
-        });
-
-        if (existIdx >= 0) {
-          // 업데이트 (← 여기서는 row 사용)
-          const row = allRows[existIdx];
-          row['재고수량'] = stock;
-
-          if (pattern.column === '사이즈') {
-   if ('사이즈' in row) row['사이즈'] = pattern.format(sz || '');
-   if ('색상' in row && !useColorInLabel) row['색상'] = col || row['색상'];
- } else if (pattern.column === '색상') {
-            if ('색상' in row) row['색상'] = pattern.format(sz);
-          }
-          if ('제품선택'   in row) row['제품선택']   = labelValue;
-          if ('추가상품값' in row) row['추가상품값'] = labelValue;
-
-        } else {
-          // 신규 추가 (← 여기서는 newRow 사용)
-          const newRow = { ...template };
-newRow['관리코드'] = code;
-if ('상품코드' in newRow) newRow['상품코드'] = code;
-if ('코드'     in newRow) newRow['코드']     = code;
-newRow._normCode = normCode(code);   // ★ 추가
-newRow['재고수량'] = stock;
-newRow.file = fileName;
-
-
-          if (pattern.column === '사이즈') {
-   if ('사이즈' in newRow) newRow['사이즈'] = pattern.format(sz || '');
-   if ('색상' in newRow && !useColorInLabel) newRow['색상'] = col || (newRow['색상'] || '');
- } else if (pattern.column === '색상') {
-            if ('색상' in newRow) newRow['색상'] = pattern.format(sz);
-          }
-          if ('제품선택'   in newRow) newRow['제품선택']   = labelValue;
-          if ('추가상품값' in newRow) newRow['추가상품값'] = labelValue;
-
-          // 같은 색상 블록 뒤에 삽입
-          const lastSameColorIdx = findLastIndex(allRows, r => {
-            if (r.file !== fileName || r.관리코드 !== code) return false;
-            return rowHasColorWithPattern(r, col, pattern);
-          });
-          const lastCodeIdx = findLastIndex(allRows, r => r.file === fileName && r.관리코드 === code);
-          const insertAt = (lastSameColorIdx >= 0 ? lastSameColorIdx : lastCodeIdx) + 1;
-          allRows.splice(insertAt, 0, newRow);
-        }
-      });
-
-      // ④ 같은 색상 블록을 사이즈 오름차순으로 재정렬
-      reorderColorBlock(fileName, code, col, detectSizeDisplayPatternForCodeFile(code, fileName));
-    });
-  });
-
-// UI 갱신 (옵션 편집 모드에서도 강제로 전체 새로 그림)
-const listEl = document.getElementById(`optionList_${code}`);
-if (listEl) {
-  const rowsForCode = rowsByCode(code);
-console.log("[DEBUG] 렌더링 직전:", rowsForCode.map(r => ({
-  색상: r['색상'], 사이즈: r['사이즈'], 제품선택: r['제품선택']
-})));
-listEl.innerHTML = renderOptionListHTML(code);
-
-
-  // ★ 추가: 숨김된 항목도 강제 표시
-  listEl.style.display = "block";
-}
-
-const cEl  = document.getElementById(`newColor_${code}`);
-const sEl  = document.getElementById(`newSize_${code}`);
-const stEl = document.getElementById(`newStock_${code}`);
-if (cEl) cEl.value = '';
-if (sEl) sEl.value = '';
-if (stEl) stEl.value = '99999';
-
-}
-// 코드 비교용 표준화: 공백 제거 + 대문자
-function normCode(s) {
-  return String(s ?? '').replace(/\s+/g, '').toUpperCase();
-}
-
-
-// ===== [NEW] 관리코드 전체 행 삭제 =====
-function deleteCodeRows(code) {
-  const target = normCode(code);
-
-  const before = allRows.length;
-  if (!confirm(`관리코드 "${code}"에 해당하는 모든 행을 삭제할까요?\n\n⚠️ 되돌리기는 새로고침 전까지 불가합니다.`)) {
-    return;
-  }
-
-  // 해당 관리코드(관리코드/상품코드/코드 어느 열이든)와 매칭되는 행 제거
-  allRows = allRows.filter(r => (
-    normCode(r['관리코드']) !== target &&
-    normCode(r['상품코드']) !== target &&
-    normCode(r['코드'])     !== target
-  ));
-
-  // 상태/코드 목록 정리
-  delete soldoutState[code];
-
-  const set = new Set();
-  allRows.forEach(r => {
-    const c = r['관리코드'] || r['상품코드'] || r['코드'] || '';
-    if (c) set.add(c);
-  });
-  uniqueCodes = Array.from(set);
-
-   // 재채번 후 UI 갱신
-   renumberAllFiles();
-   selectedCode = null;
-   updateCodeBtns();
-   updateProdCount();
-   updateSoldoutList();
-
-  alert(`삭제 완료: ${before - allRows.length}개 행`);
-}
-
-// === [NEW] 제품명 접두 순번 처리 유틸 ===
-function getLabelKey(row){
-  if (Object.prototype.hasOwnProperty.call(row, '제품선택')) return '제품선택';
-  if (Object.prototype.hasOwnProperty.call(row, '추가상품값')) return '추가상품값';
-  return null;
-}
-function hasSeqPrefix(label){
-  return /^\s*\d+\)\s*/.test(String(label||''));
-}
-function stripSeqPrefix(label){
-  return String(label||'').replace(/^\s*\d+\)\s*/, '');
-}
-function detectSeqWidthInFile(file){
-  let width = 2; // 기본 2자리 유지
-  for (const r of allRows){
-    if (r.file !== file) continue;
-    const key = getLabelKey(r); if (!key) continue;
-    const m = String(r[key]||'').match(/^\s*(\d+)\)\s*/);
-    if (m) width = Math.max(width, m[1].length);
-  }
-  return width;
-}
-function padSeq(n, width){
-  const s = String(n);
-  return s.length >= width ? s : '0'.repeat(width - s.length) + s;
-}
-
-/**
- * 파일 단위로 '순번 접두사가 붙어있는 상품들'만 대상 삼아
- * 코드의 최초 등장 순서대로 01), 02), ... 재채번
- */
-function renumberProductPrefixesPerFile(file){
-  const width = detectSeqWidthInFile(file);
-
-  // 코드 최초 등장 인덱스(해당 파일 내, 접두 순번이 붙은 라벨만)
-  const firstIdxByCode = new Map();
-  for (let i=0; i<allRows.length; i++){
-    const r = allRows[i];
-    if (r.file !== file) continue;
-    const key = getLabelKey(r); if (!key) continue;
-    const label = r[key];
-    if (!hasSeqPrefix(label)) continue;
-
-    const code = r['관리코드'] || r['상품코드'] || r['코드'] || '';
-    if (code && !firstIdxByCode.has(code)) firstIdxByCode.set(code, i);
-  }
-
-  // 등장 순서대로 재채번
-  const orderedCodes = Array.from(firstIdxByCode.entries())
-    .sort((a,b)=>a[1]-b[1])
-    .map(([c])=>c);
-
-  orderedCodes.forEach((code, idx)=>{
-    const seq = padSeq(idx+1, width); // 01, 02, ...
-    for (const r of allRows){
-      if (r.file !== file) continue;
-      const c = r['관리코드'] || r['상품코드'] || r['코드'] || '';
-      if (c !== code) continue;
-      const key = getLabelKey(r); if (!key) continue;
-      const label = r[key];
-      if (!hasSeqPrefix(label)) continue; // 접두 없는 라벨은 건드리지 않음
-      const rest = stripSeqPrefix(label);
-      r[key] = `${seq}) ${rest}`;
-    }
-  });
-}
-
-/** 모든 파일에 대해 재채번 실행 */
-function renumberAllFiles(){
-  const files = Array.from(new Set(allRows.map(r=>r.file)));
-  files.forEach(renumberProductPrefixesPerFile);
 }
 
   </script>
