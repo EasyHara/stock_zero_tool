@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리코드별 색상/사이즈 품절툴 (3-Column)</title>
+  <title>관리코드별 색상/사이즈 품절툴 (자동 품절 감지)</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
@@ -317,7 +317,7 @@ body {
         여러 옵션 파일을 업로드하고 <b style="color:#248960;">관리코드</b>를 클릭하면<br>
         우측 패널에서 <span style="color:#3c6844; font-weight:600;">전체 품절, 개별 품절/단종</span>을 선택하거나 옵션을 편집합니다.<br>
         <span style="color:#c63737;">
-        옵션 이름은 반드시 각 행의 ‘색상’, ‘사이즈’ 컬럼에 정확히 입력되어 있어야 합니다.
+        재고가 0인 옵션은 자동으로 품절 상태로 체크됩니다.
         </span>
       </div>
 
@@ -436,7 +436,7 @@ function formatValidationSummary(report) {
   const lines = [];
   lines.push(`총 행: ${report.totals.rows.toLocaleString()}개`);
   lines.push(`- 관리코드 누락: ${report.missingCode.length}개`);
-  lines.push(`- 색상/사이Z즈 파싱 실패: ${report.parseFail.length}개`);
+  lines.push(`- 색상/사이즈 파싱 실패: ${report.parseFail.length}개`);
   lines.push(`- 중복 옵션 키: ${report.duplicates.length}개 그룹`);
   lines.push(`- 혼재된 사이즈 표기: ${report.mixedSizePattern.length}개 그룹`);
   if (report.duplicates.length) {
@@ -797,9 +797,20 @@ function readExcel(file) {
   });
 }
 
+// [수정] 파일 통합 및 초기 품절 상태 계산
 function mergeAllRows() {
   allRows = [];
   let codeSet = new Set();
+  // soldoutState는 초기화하지 않고 누적할지 여부가 중요하지만, 
+  // handleFiles 호출 시 계속 추가되는 구조이므로 여기서 초기화하지 않고 
+  // 새로 추가된 데이터에 대해서만 처리하거나, 혹은 파일 로드 시점에 전체를 다시 계산하도록 합니다.
+  // 여기서는 간단히: 파일 추가될 때마다 전체 allRows를 다시 빌드하고 soldoutState도 새로 계산합니다.
+  // (단, 사용자가 이미 수동 조작한 내역이 있다면 유지해야 하므로 주의가 필요하나,
+  //  현재 구조상 파일 추가 시 기존 soldoutState를 유지하는게 더 복잡하므로 리셋 후 재계산이 안전합니다.
+  //  만약 파일 추가 시 기존 작업 유지하려면 별도 로직 필요. 여기서는 파일 로드 시 자동감지 우선)
+  soldoutState = {}; 
+
+  // 1. 데이터 통합
   for (let {name, data} of fileDataArr) {
     data.forEach(row => {
       const code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
@@ -810,12 +821,61 @@ function mergeAllRows() {
         _normCode: normCode(code)
       });
       if (code) codeSet.add(code);
-      if (typeof code === 'string' && code.trim().startsWith('단종')) {
-        soldoutState[code] = { 전체: "discont", 복합: [] };
-      }
     });
   }
   uniqueCodes = Array.from(codeSet);
+
+  // 2. 각 코드별 상태 자동 감지 (단종 및 재고 0 품절)
+  for (const code of uniqueCodes) {
+    // (A) 단종 감지
+    if (typeof code === 'string' && code.trim().startsWith('단종')) {
+      soldoutState[code] = { 전체: "discont", 복합: [] };
+      continue;
+    }
+
+    // (B) 재고 0 감지
+    const rows = rowsByCode(code);
+    if (rows.length === 0) continue;
+
+    let zeroOptions = [];
+    let totalCount = rows.length;
+    let zeroCount = 0;
+
+    for (const r of rows) {
+       let stockVal = r['재고수량'];
+       // 공란이거나 숫자가 아니거나 0 이하면 품절로 간주
+       // 주의: 엑셀 공란을 0으로 볼지 여부 -> 보통 0 취급
+       let stock = (stockVal === '' || stockVal === null || stockVal === undefined) ? 0 : Number(stockVal);
+       
+       if (isNaN(stock) || stock <= 0) {
+         zeroCount++;
+         const { color, size } = extractColorAndSize(r);
+         zeroOptions.push({
+           색상: color,
+           사이즈: size,
+           상태: 'soldout'
+         });
+       }
+    }
+
+    if (totalCount > 0 && zeroCount === totalCount) {
+      // 모든 옵션 재고 0 -> 전체 품절
+      soldoutState[code] = { 전체: "soldout", 복합: [] };
+    } else if (zeroCount > 0) {
+      // 일부 옵션 재고 0 -> 개별 품절 등록
+      // 중복 제거 (같은 옵션이 여러 파일에 있을 수 있음)
+      const uniqueZero = [];
+      const seen = new Set();
+      for (let opt of zeroOptions) {
+        const k = `${opt.색상}||${opt.사이즈}`;
+        if (!seen.has(k)) {
+          seen.add(k);
+          uniqueZero.push(opt);
+        }
+      }
+      soldoutState[code] = { 전체: false, 복합: uniqueZero };
+    }
+  }
 }
 
 function setAllStock99999() {
@@ -1009,7 +1069,7 @@ function renderSoldoutPanel(container, code) {
         soldoutState[code].전체 = false;
       }
 
-      let idx = (soldoutState[code].복합 || []).findIndex(o =>
+      let idx = (soldoutState[code].복합 || []).findIndex(o => 
         (o.색상 === color || (!color && !o.색상)) &&
         (o.사이즈 === size || (!size && !o.사이즈))
       );
@@ -1154,7 +1214,7 @@ function renderOptionListHTML(code) {
     html += `
       <div class="opt-file">
         <div class="opt-file__title">${file}</div>
-    `;
+      `;
     const byColor = byFile[file];
     Object.keys(byColor).sort((a,b)=>a.localeCompare(b,'ko')).forEach(color => {
       const list = byColor[color].sort((a,b)=>compareSize(a.size, b.size));
@@ -1269,7 +1329,7 @@ function addNewOption(code) {
           const newRow = { ...template };
           newRow['관리코드'] = code;
           if ('상품코드' in newRow) newRow['상품코드'] = code;
-          if ('코드'     in newRow) newRow['코드']     = code;
+          if ('코드'      in newRow) newRow['코드']      = code;
           newRow._normCode = normCode(code);
           newRow['재고수량'] = stock;
           newRow.file = fileName;
