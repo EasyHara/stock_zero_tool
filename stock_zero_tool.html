@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리코드별 색상/사이즈 품절툴 (자동 품절 감지)</title>
+  <title>관리코드별 색상/사이즈 품절툴 (99999 리셋 수정)</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
@@ -336,7 +336,7 @@ body {
           <button class="switch-btn on" id="modeSoldoutBtn" title="품절/단종 선택 모드">품절/단종 모드</button>
           <button class="switch-btn" id="modeEditBtn" title="옵션 추가/삭제 모드">옵션 편집 모드</button>
         </div>
-        <button class="switch-btn" id="setAll99999Btn" title="모든 행 재고를 99999로 설정">모두 99999</button>
+        <button class="switch-btn" id="setAll99999Btn" title="모든 행 재고를 99999로 설정 및 품절 해제">모두 99999</button>
       </div>
 
       <div class="check-row">
@@ -801,13 +801,6 @@ function readExcel(file) {
 function mergeAllRows() {
   allRows = [];
   let codeSet = new Set();
-  // soldoutState는 초기화하지 않고 누적할지 여부가 중요하지만, 
-  // handleFiles 호출 시 계속 추가되는 구조이므로 여기서 초기화하지 않고 
-  // 새로 추가된 데이터에 대해서만 처리하거나, 혹은 파일 로드 시점에 전체를 다시 계산하도록 합니다.
-  // 여기서는 간단히: 파일 추가될 때마다 전체 allRows를 다시 빌드하고 soldoutState도 새로 계산합니다.
-  // (단, 사용자가 이미 수동 조작한 내역이 있다면 유지해야 하므로 주의가 필요하나,
-  //  현재 구조상 파일 추가 시 기존 soldoutState를 유지하는게 더 복잡하므로 리셋 후 재계산이 안전합니다.
-  //  만약 파일 추가 시 기존 작업 유지하려면 별도 로직 필요. 여기서는 파일 로드 시 자동감지 우선)
   soldoutState = {}; 
 
   // 1. 데이터 통합
@@ -843,8 +836,6 @@ function mergeAllRows() {
 
     for (const r of rows) {
        let stockVal = r['재고수량'];
-       // 공란이거나 숫자가 아니거나 0 이하면 품절로 간주
-       // 주의: 엑셀 공란을 0으로 볼지 여부 -> 보통 0 취급
        let stock = (stockVal === '' || stockVal === null || stockVal === undefined) ? 0 : Number(stockVal);
        
        if (isNaN(stock) || stock <= 0) {
@@ -859,11 +850,8 @@ function mergeAllRows() {
     }
 
     if (totalCount > 0 && zeroCount === totalCount) {
-      // 모든 옵션 재고 0 -> 전체 품절
       soldoutState[code] = { 전체: "soldout", 복합: [] };
     } else if (zeroCount > 0) {
-      // 일부 옵션 재고 0 -> 개별 품절 등록
-      // 중복 제거 (같은 옵션이 여러 파일에 있을 수 있음)
       const uniqueZero = [];
       const seen = new Set();
       for (let opt of zeroOptions) {
@@ -878,22 +866,41 @@ function mergeAllRows() {
   }
 }
 
+// [수정] 99999 설정 시 품절 상태도 리셋 (단, 이름이 '단종'인 것은 유지)
 function setAllStock99999() {
   if (!allRows.length) { alert('먼저 파일을 업로드하세요.'); return; }
   const ok = confirm(
     '모든 파일의 모든 행 재고를 99999로 설정합니다.\n' +
-    '※ 단종/품절로 지정된 항목은 다운로드 시 재고 0으로 적용됩니다.\n계속할까요?'
+    '기존 품절 상태도 모두 해제됩니다.\n(단, 이름이 "단종"으로 시작하는 항목은 유지)\n계속할까요?'
   );
   if (!ok) return;
+
+  // 1. 데이터 재고 변경
   for (const r of allRows) { r['재고수량'] = 99999; }
+  
   const fillBox = document.getElementById('fillStockCheckbox');
   if (fillBox) fillBox.checked = false;
   
+  // 2. soldoutState 초기화 (기존 품절 해제)
+  soldoutState = {};
+  
+  // 3. 원래 '단종'이었던 코드(이름 기준)는 다시 단종 처리
+  for (const code of uniqueCodes) {
+    if (typeof code === 'string' && code.trim().startsWith('단종')) {
+      soldoutState[code] = { 전체: "discont", 복합: [] };
+    }
+  }
+
+  // 4. UI 전체 갱신
+  updateCodeBtns();
+  updateSoldoutList();
+
   // 편집 패널이 열려있다면 갱신
-  if (selectedCode && mode === 'edit') {
+  if (selectedCode) {
     renderContextPanel(selectedCode);
   }
-  alert('모든 재고를 99999로 설정했습니다.');
+
+  alert('모든 재고를 99999로 설정하고 품절 상태를 해제했습니다.');
 }
 
 function setMode(newMode) {
