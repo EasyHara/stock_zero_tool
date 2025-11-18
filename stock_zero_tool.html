@@ -501,14 +501,46 @@ codeSearchInput.addEventListener('input', function(e) {
     });
 });
 
+// [신규] 오타 자동 수정 함수 ("02 )" -> "02)")
+function autoFixTypos(applyFix = false) {
+  const targets = ['제품선택', '추가상품값'];
+  const typoRe = /^(\s*\d+)\s+\)(.*)$/; // "숫자 + 공백 + )" 패턴 감지
+  let count = 0;
+  const samples = [];
 
-// === 다운로드 직전 검증 (기존 코드 유지) ===
+  allRows.forEach(r => {
+    targets.forEach(key => {
+      if (!r[key]) return;
+      const val = String(r[key]);
+      const match = val.match(typoRe);
+      if (match) {
+        // 공백 제거하여 포맷 통일
+        const fixedVal = `${match[1].trim()}) ${match[2].trim()}`;
+        
+        if (applyFix) {
+          r[key] = fixedVal;
+        }
+        count++;
+        if (samples.length < 3) {
+          samples.push(`"${val}" → "${fixedVal}"`);
+        }
+      }
+    });
+  });
+  return { count, samples };
+}
+
+// [수정됨] 다운로드 전 리포트 생성 (오타 감지 포함)
 function buildValidationReport() {
+  // 1. 오타 검사 (적용은 안 하고 카운트만)
+  const typoReport = autoFixTypos(false);
+
   const r = {
     missingCode: [],
     parseFail: [],
     duplicates: [],
     mixedSizePattern: [],
+    typoFixes: typoReport, // 오타 리포트 추가
     totals: { rows: allRows.length }
   };
   const dupMap = new Map();
@@ -540,13 +572,25 @@ function buildValidationReport() {
       r.mixedSizePattern.push({ file, code, detail: '사이즈 열에 접미사 패턴과 순수값이 혼재' });
     }
   });
+  
+  // 오타 이슈도 합산
   r.totals.issues =
-    r.missingCode.length + r.parseFail.length + r.duplicates.length + r.mixedSizePattern.length;
+    r.missingCode.length + r.parseFail.length + r.duplicates.length + r.mixedSizePattern.length + (typoReport.count > 0 ? 1 : 0);
   return r;
 }
+// [수정됨] 리포트 메시지 출력 (오타 알림 추가)
 function formatValidationSummary(report) {
   if (!report || !report.totals) return '검증 결과를 생성하지 못했습니다.';
   const lines = [];
+
+  // 오타 발견 시 최상단에 알림
+  if (report.typoFixes && report.typoFixes.count > 0) {
+      lines.push(`✅ [자동보정 알림] 총 ${report.typoFixes.count}건의 순번 오타("02 )")를 발견했습니다.`);
+      lines.push(`   다운로드 파일에는 "02)" 형태로 자동 수정되어 저장됩니다.`);
+      lines.push(`   (예시: ${report.typoFixes.samples[0]})`);
+      lines.push('--------------------------------------------------');
+  }
+
   lines.push(`총 행: ${report.totals.rows.toLocaleString()}개`);
   lines.push(`- 관리코드 누락: ${report.missingCode.length}개`);
   lines.push(`- 색상/사이즈 파싱 실패: ${report.parseFail.length}개`);
@@ -792,14 +836,18 @@ function getLabelKey(row){
   if (Object.prototype.hasOwnProperty.call(row, '추가상품값')) return '추가상품값';
   return null;
 }
-function hasSeqPrefix(label){ return /^\s*\d+\)\s*/.test(String(label||'')); }
-function stripSeqPrefix(label){ return String(label||'').replace(/^\s*\d+\)\s*/, ''); }
+// [수정됨] 괄호 앞 공백(\s*) 허용하도록 정규식 변경
+function hasSeqPrefix(label){ return /^\s*\d+\s*\)\s*/.test(String(label||'')); }
+
+function stripSeqPrefix(label){ return String(label||'').replace(/^\s*\d+\s*\)\s*/, ''); }
+
 function detectSeqWidthInFile(file){
   let width = 2;
   for (const r of allRows){
     if (r.file !== file) continue;
     const key = getLabelKey(r); if (!key) continue;
-    const m = String(r[key]||'').match(/^\s*(\d+)\s*/);
+    // 여기도 정규식 변경
+    const m = String(r[key]||'').match(/^\s*(\d+)\s*\)/); 
     if (m) width = Math.max(width, m[1].length);
   }
   return width;
@@ -1707,9 +1755,15 @@ function updateProdCount() {
     ? `총 ${uniqueCodes.length}개 관리코드` : '';
 }
 
-// [수정] downloadFiles: 함수명 변경 및 기존 로직 유지
+// [수정됨] 다운로드 실행 함수 (실제 오타 수정 적용)
 async function downloadFiles() {
   const report = buildValidationReport();
+
+  // 다운로드 버튼 누르면 실제 데이터 수정 적용 (Apply Fix = true)
+  if (report.typoFixes && report.typoFixes.count > 0) {
+      autoFixTypos(true); 
+  }
+
   const msg = formatValidationSummary(report);
   if (report.totals.issues > 0) {
     if (!confirm(msg)) return;
@@ -1758,7 +1812,10 @@ async function downloadFiles() {
       }
     }
   }
+  
+  // 오타 수정 후, 순번 다시 매기기 (이제 오타가 없으므로 정렬이 잘 됨)
   renumberAllFiles();
+  
   const rowsByFile = {};
   for (const r of allRows) {
     const fname = r.file || '편집추가.xlsx';
