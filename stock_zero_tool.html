@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리코드별 색상/사이즈 품절툴 (99999 리셋 수정)</title>
+  <title>관리코드별 색상/사이즈 품절툴 (검색 및 일괄품절)</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
@@ -82,17 +82,57 @@ body {
   display: flex;
   flex-direction: column;
 }
-.side-area h3 { font-size: 1.1rem; font-weight: 600; color: #195140; margin-bottom: 6px; }
+.side-area h3 { font-size: 1.1rem; font-weight: 600; color: #195140; margin-bottom: 10px; }
+
 .side-area ul {
   font-size: 14.5px; list-style: none; margin: 0; padding: 0;
-  flex: 1; /* 리스트가 남은 공간 차지 */
+  flex: 1;
   overflow-y: auto;
 }
-.side-area ul li {
-  background: #e1ece6; border-radius: 7px;
-  margin-bottom: 7px; padding: 6px 11px; color: #315e4d;
-  font-weight: 500; word-break: break-all;
+/* 그룹 박스 스타일 */
+.side-group {
+  background: #fff;
+  border: 1px solid #dae8e2;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
 }
+/* 그룹 헤더 (관리코드) */
+.side-group-title {
+  background: #eef5f2;
+  padding: 8px 12px;
+  color: #246b5c;
+  font-weight: 700;
+  font-size: 14px;
+  border-bottom: 1px solid #e6f0ec;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+/* 그룹 내부 리스트 (옵션) */
+.side-sub-list {
+  list-style: none; margin: 0; padding: 0;
+}
+.side-sub-list li {
+  padding: 7px 12px;
+  border-bottom: 1px solid #f4f8f6;
+  color: #444;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.side-sub-list li:last-child { border-bottom: none; }
+.badge-state {
+  font-size: 11px; font-weight: 700; padding: 2px 5px; border-radius: 4px;
+  min-width: 28px; text-align: center;
+}
+.badge-soldout { background: #ffeaea; color: #c53030; }
+.badge-discont { background: #ede9fe; color: #6d28d9; }
+.badge-all-soldout { background: #c6f6d5; color: #22543d; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+.badge-all-discont { background: #e9d8fd; color: #44337a; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+
 
 /* --- 2. 컨트롤 (버튼, 입력 등) --- */
 .main-title-wrap {
@@ -146,6 +186,57 @@ body {
   vertical-align: middle; margin-right: 5px; margin-top: 1.5px;
 }
 
+/* 검색바 스타일 추가 */
+.search-bar-wrap {
+    width: 100%;
+    margin-bottom: 12px;
+    position: relative;
+}
+.search-input {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 15px;
+    border: 1.2px solid #b0c9bb;
+    border-radius: 10px;
+    box-sizing: border-box;
+    background: #fbfdfc;
+    color: #163326;
+}
+.search-input:focus {
+    outline: none;
+    border-color: #5cb88a;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(92, 184, 138, 0.1);
+}
+.search-input::placeholder {
+    color: #9ab0a5;
+}
+
+/* 일괄 품절 입력 스타일 추가 */
+.bulk-input-area {
+  margin: 15px 0;
+  padding: 12px;
+  background: #f5fbf8;
+  border: 1px solid #dbece5;
+  border-radius: 10px;
+}
+.bulk-input-title {
+  font-size: 13px; font-weight: 700; color: #2c6e58; margin-bottom: 6px;
+}
+.bulk-input-row {
+  display: flex; gap: 6px;
+}
+.bulk-input {
+  flex: 1; padding: 8px 10px; border: 1px solid #b0c9bb; border-radius: 6px;
+  font-size: 13px;
+}
+.bulk-btn {
+  padding: 8px 12px; background: #4a9c80; color: #fff; font-weight: 600;
+  border: none; border-radius: 6px; cursor: pointer; font-size: 13px;
+}
+.bulk-btn:hover { background: #3a826a; }
+
+
 /* --- 3. 관리코드 버튼 (1단) --- */
 #codeBtnArea {
   margin-top: 15px; margin-bottom: 8px;
@@ -178,6 +269,9 @@ body {
   box-shadow: 0 0 0 3px #b5e9d6 inset !important;
   border-color: #4bc79f !important; border-width: 2px;
 }
+/* 숨김 처리용 클래스 */
+.hidden { display: none !important; }
+
 
 /* --- 4. 컨텍스트 패널 내부 (2단) --- */
 .context-area h2 {
@@ -346,6 +440,10 @@ body {
         </label>
         <span id="prodCountInfo" style="font-size:15.2px;color:#3b7c53;"></span>
       </div>
+      
+      <div class="search-bar-wrap">
+        <input type="text" id="codeSearchInput" class="search-input" placeholder="관리코드 검색 (일부 입력 가능)...">
+      </div>
 
       <div id="codeBtnArea"></div>
     </div>
@@ -387,6 +485,21 @@ const fileCountElem = document.getElementById('fileCount');
 const prodCountInfoElem = document.getElementById('prodCountInfo');
 const modeSoldoutBtn = document.getElementById('modeSoldoutBtn');
 const modeEditBtn = document.getElementById('modeEditBtn');
+const codeSearchInput = document.getElementById('codeSearchInput'); // 검색창
+
+// === [신규] 관리코드 검색 기능 ===
+codeSearchInput.addEventListener('input', function(e) {
+    const query = e.target.value.toLowerCase().trim();
+    const btns = codeBtnArea.getElementsByClassName('code-btn');
+    Array.from(btns).forEach(btn => {
+        const text = btn.textContent.toLowerCase();
+        if (text.includes(query)) {
+            btn.classList.remove('hidden');
+        } else {
+            btn.classList.add('hidden');
+        }
+    });
+});
 
 
 // === 다운로드 직전 검증 (기존 코드 유지) ===
@@ -457,12 +570,35 @@ function formatValidationSummary(report) {
 
 // === 유틸리티 함수 (기존 코드 유지) ===
 function toSafeId(str) { return String(str).replace(/[^a-zA-Z0-9\-_:.]/g, '_'); }
+
+// [수정] 색상/사이즈 복합 컬럼 인식 추가
 function extractColorAndSize(row) {
   let color = (row['색상']  ?? '').toString().trim();
   let size  = (row['사이즈'] ?? '').toString().trim();
+  let combined = (row['색상/사이즈'] ?? '').toString().trim(); // 추가된 인식 로직
+
+  // '색상/사이즈' 컬럼이 있고, 개별 컬럼이 비어있을 경우 처리
+  if (!color && !size && combined) {
+    if (combined.includes('/')) {
+       const parts = combined.split('/').map(s => s.trim());
+       // 보통 "색상 / 사이즈" 순서
+       if (parts.length >= 2) {
+         color = parts[0];
+         size = parts[1];
+       } else {
+         color = combined; 
+       }
+    } else {
+       // 슬래시가 없으면 사이즈인지 색상인지 추측
+       if (isSizeToken(combined)) size = combined;
+       else color = combined;
+    }
+  }
+
   const label = (row['제품선택'] || row['추가상품값'] || '').toString().trim();
   const tokens = label ? label.split('/').map(s => s.trim()).filter(Boolean) : [];
   const m = color.match(/^([A-Za-z0-9]+)\s*\/\s*(.+)$/);
+  
   if (!size && m && isSizeToken(m[1])) {
     size = m[1].trim();
     for (let i = tokens.length - 1; i >= 0; i--) {
@@ -753,6 +889,7 @@ function resetAll() {
   inputFilesElem.value = '';
   prodCountInfoElem.textContent = '';
   codeBtnArea.innerHTML = '';
+  codeSearchInput.value = ''; // 검색어 초기화
   updateSoldoutList();
   clearContextPanel();
   downloadBtn.disabled = true;
@@ -924,11 +1061,19 @@ function setMode(newMode) {
 
 function updateCodeBtns() {
   codeBtnArea.innerHTML = '';
+  // 검색어 필터 적용을 위해 현재 검색어 확인
+  const filterText = codeSearchInput ? codeSearchInput.value.toLowerCase().trim() : '';
+
   for (let code of uniqueCodes) {
     if (!code) continue;
     const btn = document.createElement('button');
     btn.id = 'codeBtn_' + toSafeId(code);
     btn.className = 'code-btn';
+
+    // 검색 필터 적용
+    if (filterText && !code.toLowerCase().includes(filterText)) {
+        btn.classList.add('hidden');
+    }
 
     // 상태 클래스 적용
     const state = soldoutState[code];
@@ -995,7 +1140,7 @@ function renderContextPanel(code) {
   }
 }
 
-// [신규] 2단: 품절 모드 패널 렌더링
+// [신규] 2단: 품절 모드 패널 렌더링 (일괄 품절 기능 포함)
 function renderSoldoutPanel(container, code) {
   const rows = rowsByCode(code);
   let colorSet = new Set(), sizeSet = new Set();
@@ -1021,6 +1166,14 @@ function renderSoldoutPanel(container, code) {
       <button class="switch-btn ${isAllDiscont ? 'on' : ''}" style="background-color: ${isAllDiscont ? '#856ed9' : ''};" onclick="setAllDiscont('${code}')">
         ${isAllDiscont ? '전체단종 (ON)' : '전체 단종'}
       </button>
+    </div>
+
+    <div class="bulk-input-area">
+      <div class="bulk-input-title">일괄 품절 처리 (쉼표로 구분)</div>
+      <div class="bulk-input-row">
+        <input type="text" id="bulkInput_${toSafeId(code)}" class="bulk-input" placeholder="예: 90, 95, 110, 품절...">
+        <button class="bulk-btn" onclick="processBulkSoldout('${code}')">적용</button>
+      </div>
     </div>
 
     <div class="section-title" style="margin-top: 20px;">개별 옵션 처리</div>
@@ -1057,6 +1210,7 @@ function renderSoldoutPanel(container, code) {
     b.textContent = label;
     b.dataset.color = color || '';
     b.dataset.size  = size  || '';
+    b.dataset.label = label || ''; // 검색용 텍스트 저장
 
     // 초기 상태 도색
     if (isAllSoldout) b.classList.add('selected');
@@ -1116,6 +1270,77 @@ function renderSoldoutPanel(container, code) {
     grid.innerHTML = `<div class="opt-empty" style="grid-column: 1 / -1;">옵션을 찾을 수 없습니다.</div>`;
   }
 }
+
+// [신규] 일괄 품절 처리 로직
+function processBulkSoldout(code) {
+    const inputEl = document.getElementById(`bulkInput_${toSafeId(code)}`);
+    if (!inputEl) return;
+    
+    const rawVal = inputEl.value;
+    if (!rawVal.trim()) {
+        alert("검색어를 입력하세요 (예: 90, 95)");
+        return;
+    }
+
+    const keywords = rawVal.split(',').map(s => s.trim()).filter(s => s);
+    const grid = document.getElementById(`optionBtnGrid_${toSafeId(code)}`);
+    if (!grid) return;
+
+    const buttons = grid.getElementsByClassName('option-btn');
+    let changedCount = 0;
+
+    soldoutState[code] = soldoutState[code] || { 전체: false, 복합: [] };
+    // 전체 상태였으면 해제
+    if (soldoutState[code].전체 === "soldout" || soldoutState[code].전체 === "discont") {
+        soldoutState[code].전체 = false;
+    }
+
+    Array.from(buttons).forEach(btn => {
+        const label = btn.textContent.toLowerCase();
+        const color = btn.dataset.color;
+        const size = btn.dataset.size;
+
+        // 키워드 중 하나라도 포함되면 품절 처리
+        const matched = keywords.some(k => label.includes(k.toLowerCase()));
+        
+        if (matched) {
+             // 이미 품절/단종 상태인지 확인
+             const existingIdx = (soldoutState[code].복합 || []).findIndex(o => 
+                (o.색상 === color || (!color && !o.색상)) &&
+                (o.사이즈 === size || (!size && !o.사이즈))
+             );
+             
+             // 상태가 없거나, 단종이 아닌 경우만 '품절'로 설정 (단종은 유지)
+             if (existingIdx < 0) {
+                 soldoutState[code].복합.push(
+                    color && size ? { 색상: color, 사이즈: size, 상태: "soldout" }
+                    : color ?       { 색상: color, 상태: "soldout" }
+                            :       { 사이즈: size, 상태: "soldout" }
+                 );
+                 changedCount++;
+             } else if (soldoutState[code].복합[existingIdx].상태 !== 'discont' && soldoutState[code].복합[existingIdx].상태 !== 'soldout') {
+                 // 혹시 다른 상태가 있다면 갱신 (현재 로직상 이럴 일은 거의 없음)
+                 soldoutState[code].복합[existingIdx].상태 = "soldout";
+                 changedCount++;
+             }
+        }
+    });
+
+    if (changedCount > 0) {
+        checkAndAutoSetAllOptionState(code);
+        updateSoldoutList();
+        updateCodeBtns();
+        renderSoldoutPanel(document.getElementById('contextArea'), code); // 패널 갱신
+        // 입력창 값 유지
+        setTimeout(() => {
+            const newInput = document.getElementById(`bulkInput_${toSafeId(code)}`);
+            if(newInput) { newInput.value = rawVal; newInput.focus(); }
+        }, 50);
+    } else {
+        alert("일치하는 옵션을 찾지 못했습니다.");
+    }
+}
+
 
 // [신규] 2단: 품절 모드용 헬퍼 함수
 function setAllSoldout(code) {
@@ -1244,27 +1469,61 @@ function renderOptionListHTML(code) {
   return html;
 }
 
-// === [수정] UI 렌더링 (3단: 요약 리스트) ===
-
+// === [수정] UI 렌더링 (3단: 요약 리스트) - 그룹화 적용 ===
 function updateSoldoutList() {
   soldoutListUl.innerHTML = '';
   let any = false;
+
   for (let code of uniqueCodes) {
-    if (soldoutState[code]?.전체 === "discont") {
-      soldoutListUl.innerHTML += `<li><b>${code}</b> <span style="color:#533e8e;font-weight:700;">전체단종</span></li>`;
+    const state = soldoutState[code];
+    if (!state) continue;
+
+    // 1. 전체 단종인 경우
+    if (state.전체 === "discont") {
+      soldoutListUl.innerHTML += `
+        <li class="side-group">
+          <div class="side-group-title">
+            ${code} <span class="badge-all-discont">전체단종</span>
+          </div>
+        </li>`;
       any = true;
-    } else if (soldoutState[code]?.전체 === "soldout") {
-      soldoutListUl.innerHTML += `<li><b>${code}</b> <span style="color:#606060;font-weight:700;">전체품절</span></li>`;
+    }
+    // 2. 전체 품절인 경우
+    else if (state.전체 === "soldout") {
+      soldoutListUl.innerHTML += `
+        <li class="side-group">
+          <div class="side-group-title">
+            ${code} <span class="badge-all-soldout">전체품절</span>
+          </div>
+        </li>`;
       any = true;
-    } else if ((soldoutState[code]?.복합||[]).length > 0) {
-      for (let opt of soldoutState[code].복합) {
-        let stateLabel = opt.상태 === "discont" ? '<span style="color:#533e8e;font-weight:700;">단종</span>' : '품절';
-        soldoutListUl.innerHTML += `<li><b>${code}</b> ${opt.색상?opt.색상+'/':''}${opt.사이즈||''} ${stateLabel}</li>`;
-        any = true;
+    }
+    // 3. 개별 옵션인 경우 (그룹화)
+    else if ((state.복합 || []).length > 0) {
+      let groupHtml = `
+        <li class="side-group">
+          <div class="side-group-title">${code}</div>
+          <ul class="side-sub-list">
+      `;
+      
+      for (let opt of state.복합) {
+        let badge = opt.상태 === "discont" 
+          ? '<span class="badge-state badge-discont">단종</span>' 
+          : '<span class="badge-state badge-soldout">품절</span>';
+        
+        let optName = `${opt.색상 ? opt.색상 + ' / ' : ''}${opt.사이즈 || ''}`;
+        if (optName.endsWith(' / ')) optName = optName.slice(0, -3); // 사이즈 없으면 / 제거
+
+        groupHtml += `<li>${badge} ${optName}</li>`;
       }
+      
+      groupHtml += `</ul></li>`;
+      soldoutListUl.innerHTML += groupHtml;
+      any = true;
     }
   }
-  if (!any) soldoutListUl.innerHTML = `<li style="color:#b5b5b5;">(선택내역 없음)</li>`;
+  
+  if (!any) soldoutListUl.innerHTML = `<li style="color:#b5b5b5; padding:10px; text-align:center;">(선택내역 없음)</li>`;
 }
 
 // === [수정] 핵심 로직 (옵션 추가, 삭제, 다운로드) ===
