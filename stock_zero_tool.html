@@ -2993,12 +2993,20 @@ function showToast(message) {
 //  [신규] GitHub API 연동 (클라우드 저장/불러오기)
 // ==========================================
 
-// 1. 설정 불러오기 (페이지 열릴 때 자동 실행)
+// 1. 설정 불러오기 (페이지 열릴 때 자동 실행) - [수정됨]
 document.addEventListener('DOMContentLoaded', () => {
+    // 고객님 요청: 기본값 하드코딩
+    const DEFAULT_TOKEN = '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';
+    const DEFAULT_REPO = 'EasyHara/stock_zero_tool';
+    const DEFAULT_PATH = 'soldout_data.json';
+
+    // 1. 브라우저에 저장된 설정이 있는지 확인
     const ghConfig = JSON.parse(localStorage.getItem('gh_config') || '{}');
-    if(ghConfig.token) document.getElementById('ghToken').value = ghConfig.token;
-    if(ghConfig.repo) document.getElementById('ghRepo').value = ghConfig.repo;
-    if(ghConfig.path) document.getElementById('ghPath').value = ghConfig.path;
+
+    // 2. 저장된 값이 있으면 그거 쓰고, 없으면(새 컴퓨터면) 하드코딩 된 값 자동 입력
+    document.getElementById('ghToken').value = ghConfig.token || DEFAULT_TOKEN;
+    document.getElementById('ghRepo').value = ghConfig.repo || DEFAULT_REPO;
+    document.getElementById('ghPath').value = ghConfig.path || DEFAULT_PATH;
 });
 
 // 2. 설정 저장
@@ -3176,26 +3184,20 @@ async function loadFromGithub() {
         <button class="switch-btn" style="flex:1; margin:0; background:#fff;" onclick="applyFromBrowser()">현재 파일에 적용</button>
       </div>
 
-<details style="margin-top:15px; border:1px solid #ddd; padding:12px; border-radius:8px; background:#fafafa;">
-        <summary style="cursor:pointer; font-weight:700; color:#444; font-size:13px; display:flex; align-items:center; gap:6px;">
-           ☁️ GitHub 클라우드 동기화 (설정 펼치기)
-        </summary>
-        <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
-            <div style="font-size:12px; color:#666; line-height:1.4;">
-               GitHub 토큰과 저장소 정보를 입력하면 엑셀 없이 데이터를 서버에 저장할 수 있습니다.
-               <br><b style="color:#c53030;">(주의: 토큰은 타인에게 노출되지 않도록 주의하세요)</b>
-            </div>
-            <input id="ghToken" type="password" placeholder="GitHub Token (ghp_...)" class="d-input" style="background:#fff;">
-            <input id="ghRepo" type="text" placeholder="UserName/RepoName (예: myid/my-repo)" class="d-input" style="background:#fff;">
-            <input id="ghPath" type="text" value="soldout_data.json" placeholder="저장할 파일명 (예: data.json)" class="d-input" style="background:#fff;">
-            
-            <div style="display:flex; gap:6px; margin-top:4px;">
-                <button class="manual-btn" onclick="saveGithubConfig()" style="flex:1; background:#666;">설정 저장</button>
-                <button class="manual-btn" onclick="uploadToGithub()" style="flex:1; background:#0ea5e9;">☁️ 업로드(저장)</button>
-                <button class="manual-btn" onclick="loadFromGithub()" style="flex:1; background:#22c55e;">☁️ 다운로드(적용)</button>
-            </div>
+<div style="margin-top:15px; border:1px solid #ddd; padding:12px; border-radius:8px; background:#fafafa;">
+        <div style="font-weight:700; color:#444; font-size:13px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+           ☁️ GitHub 클라우드 동기화
         </div>
-      </details>
+
+        <input id="ghToken" type="hidden">
+        <input id="ghRepo" type="hidden">
+        <input id="ghPath" type="hidden">
+        
+        <div style="display:flex; gap:6px;">
+             <button class="manual-btn" onclick="uploadToGithub()" style="flex:1; background:#0ea5e9; color:#fff; border:none;">☁️ 업로드(저장)</button>
+             <button class="manual-btn" onclick="loadFromGithub()" style="flex:1; background:#22c55e; color:#fff; border:none;">☁️ 다운로드(적용)</button>
+        </div>
+      </div>
       <div style="height:10px;"></div>
 
       <div style="border-top:1px dashed #ddd; padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
