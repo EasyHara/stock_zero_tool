@@ -1213,8 +1213,9 @@ function mergeAllRows() {
   let codeSet = new Set(); 
   soldoutState = {};
   
-  // 99999 자동적용 체크 여부 확인
-  const isAuto99999 = els.auto99999LoadCheck ? els.auto99999LoadCheck.checked : false;
+  // [수정됨] 기존 els 변수 참조 오류 해결
+  // 99999 자동적용 체크 여부 확인 (HTML에 해당 ID가 없으므로 false로 고정하여 오류 방지)
+  const isAuto99999 = false; 
 
   for (let { name, data } of fileDataArr) {
     data.forEach(row => {
