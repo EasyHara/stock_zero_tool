@@ -394,6 +394,183 @@ body {
   .file-select-area { flex-wrap: wrap; }
   .code-btn { min-width: 92px; font-size: 13px; padding: 9px 7px; }
 }
+/* --- 6. 모달(팝업) 스타일 --- */
+.modal-overlay {
+  display: none; /* 기본적으로 숨김 */
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.4); /* 배경 어둡게 */
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-content {
+  background: #fff;
+  padding: 28px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+  width: 400px;
+  max-width: 90vw;
+  text-align: left;
+  position: relative;
+  animation: modalFadeIn 0.2s ease-out;
+}
+@keyframes modalFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.modal-header {
+  font-size: 1.2rem; font-weight: 700; color: #184c37;
+  margin-bottom: 16px; border-bottom: 1px solid #eee; padding-bottom: 12px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.modal-close-icon {
+  cursor: pointer; font-size: 24px; color: #999; line-height: 1;
+}
+.modal-close-icon:hover { color: #333; }
+.modal-row {
+  margin-bottom: 16px;
+}
+.modal-btn-group {
+  display: flex; gap: 8px; margin-top: 20px;
+}
+/* 관리 버튼 스타일 (메인 화면용) */
+.manage-btn {
+  background: #fff; border: 1.2px solid #b0c9bb; color: #246b5c;
+  border-radius: 10px; padding: 11px 16px; font-size: 14px; font-weight: 600;
+  cursor: pointer; margin-left: 8px; display: inline-flex; align-items: center; gap: 6px;
+  transition: all 0.13s;
+}
+.manage-btn:hover { background: #f1f8f5; border-color: #89ac98; }
+/* [신규] 엑셀 붙여넣기 영역 스타일 */
+.excel-paste-box {
+  width: 100%; height: 60px;
+  border: 2px dashed #b0c9bb; background: #fdfdfd;
+  border-radius: 8px; padding: 10px; box-sizing: border-box;
+  font-size: 13px; color: #555; margin-bottom: 10px;
+  resize: vertical; transition: all 0.2s;
+}
+.excel-paste-box:focus {
+  border-color: #2b7365; background: #fff; outline: none;
+  height: 100px; /* 포커스 되면 입력하기 좋게 늘어남 */
+}
+.excel-paste-box::placeholder { color: #999; }
+/* [수정] 동적 입력창(행 단위) 스타일 */
+.manual-add-area {
+  background: #f1f6f4; border: 1px solid #dbece5; border-radius: 8px;
+  padding: 12px; margin-bottom: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+/* 스크롤 영역 */
+.manual-scroll-box {
+  max-height: 200px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 6px; padding-right: 4px;
+}
+/* 한 줄(행) 레이아웃 */
+.dynamic-row {
+  display: flex; gap: 6px; align-items: center;
+  animation: rowFadeIn 0.2s ease-out;
+}
+@keyframes rowFadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 입력창 디자인 */
+.d-input {
+  border: 1px solid #b0c9bb; border-radius: 6px; padding: 9px 10px; font-size: 13px;
+  transition: border 0.2s;
+}
+.d-input:focus { outline: none; border-color: #2b7365; box-shadow: 0 0 0 2px rgba(43,115,101,0.1); }
+.d-code { flex: 1; min-width: 110px; } 
+.d-opt  { flex: 1.8; } /* 옵션 입력창을 더 넓게 */
+
+/* 단종 버튼 */
+.d-disc-btn {
+  padding: 9px 12px; border: 1px solid #d1d5db; background: #fff; color: #666;
+  border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.d-disc-btn:hover { background: #f3f4f6; }
+.d-disc-btn.active { background: #856ed9; color: #fff; border-color: #7c3aed; }
+
+/* 삭제(X) 버튼 */
+.d-del-btn { color: #9ca3af; cursor: pointer; padding: 4px 8px; font-size: 18px; }
+.d-del-btn:hover { color: #ef4444; }
+.d-del-btn.disabled { opacity: 0; pointer-events: none; }
+
+.storage-list-area {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  background: #fafafa;
+  height: 220px; /* 고정 높이 */
+  overflow-y: auto; /* 스크롤 생성 */
+  margin-bottom: 15px;
+}
+/* [수정] 목록 아이템 스타일 (체크박스, 수정버튼 추가) */
+.storage-ctrl-bar { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 6px; }
+.storage-item { display: flex; align-items: center; padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 13.5px; background: #fff; transition: background 0.2s; }
+.storage-item:hover { background: #f9fafb; }
+
+/* 체크박스 */
+.item-chk { margin-right: 10px; width: 16px; height: 16px; cursor: pointer; accent-color: #2b7365; }
+
+/* 정보 영역 */
+.item-info { flex: 1; display: flex; flex-direction: column; gap: 2px; cursor: pointer; } /* 클릭 시 수정 가능하도록 포인터 */
+.item-code { font-weight: 700; color: #333; font-size: 13px; }
+
+/* 버튼 그룹 (수정/삭제) */
+.item-btns { display: flex; gap: 8px; align-items: center; }
+.icon-btn { cursor: pointer; font-size: 14px; padding: 4px; color: #999; border-radius: 4px; transition: all 0.2s; }
+.icon-btn:hover { background: #eee; color: #333; }
+.icon-btn.del:hover { background: #fee2e2; color: #dc2626; }
+
+/* 선택 삭제 버튼 */
+.del-sel-btn { background: #fff; border: 1px solid #d1d5db; color: #555; padding: 4px 10px; font-size: 12px; border-radius: 6px; cursor: pointer; }
+.del-sel-btn:hover { background: #f3f4f6; color: #111; }
+.badge-sold { background: #ffeaea; color: #c53030; }
+.badge-disc { background: #ede9fe; color: #6d28d9; }
+.badge-mix  { background: #e1ece6; color: #246b5c; }
+
+.delete-icon-btn {
+  color: #ccc; cursor: pointer; padding: 4px; font-size: 16px; transition: color 0.2s;
+}
+.delete-icon-btn:hover { color: #ff4444; }
+/* [신규] 부분 단종/품절 배지 스타일 */
+.badge-part-disc { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+.badge-part-sold { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.badge-mixed     { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+/* [신규] 목록 내 상세 옵션 배지 스타일 */
+.opt-detail-wrap { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.opt-chip { 
+  font-size: 11px; padding: 2px 6px; border-radius: 4px; border: 1px solid; display: inline-flex; align-items: center; gap: 4px;
+}
+.opt-chip.sold { background: #fff5f5; color: #c53030; border-color: #feb2b2; }
+.opt-chip.disc { background: #faf5ff; color: #6b46c1; border-color: #e9d8fd; }
+.opt-chip span { font-weight: 700; opacity: 0.7; font-size: 10px; }
+
+/* 토스트 메시지 스타일 */
+#toast {
+  visibility: hidden;
+  min-width: 250px;
+  margin-left: -125px;
+  background-color: #333;
+  color: #fff;
+  text-align: center;
+  border-radius: 50px; /* 둥글게 */
+  padding: 16px;
+  position: fixed;
+  z-index: 3000; /* 팝업보다 위에 */
+  left: 50%;
+  bottom: 30px;
+  font-size: 15px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  opacity: 0;
+  transition: opacity 0.5s, bottom 0.5s;
+}
+
+#toast.show {
+  visibility: visible;
+  opacity: 1;
+  bottom: 50px; /* 살짝 위로 떠오르는 효과 */
+}
   </style>
 </head>
 <body>
@@ -420,9 +597,16 @@ body {
           엑셀파일선택
           <input type="file" id="inputFiles" class="file-input" multiple accept=".xls,.xlsx">
         </label>
-        <span id="fileNames" style="font-size:15px;max-width:360px;display:inline-block;vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        <span id="fileNames" style="font-size:15px;max-width:300px;overflow:hidden;white-space:nowrap;"></span>
         <span id="fileCount" style="font-size:14px;color:#1b8863;margin-left:7px;"></span>
+        
         <button class="reset-btn" id="resetBtn">초기화</button>
+        
+        <button class="manage-btn" onclick="openModal()">💾 데이터 관리</button>
+        
+        <button class="manage-btn" onclick="applyFromBrowser()" title="브라우저에 저장된 품절/단종 내역을 현재 파일에 즉시 적용합니다.">
+          📥 저장값 적용
+        </button>
       </div>
 
       <div class="file-select-area">
@@ -615,54 +799,72 @@ function formatValidationSummary(report) {
 // === 유틸리티 함수 (기존 코드 유지) ===
 function toSafeId(str) { return String(str).replace(/[^a-zA-Z0-9\-_:.]/g, '_'); }
 
-// [수정] 색상/사이즈 복합 컬럼 인식 추가
+// [수정] 옵션 추출 로직 (3단 분리 및 코드 제거 강화)
 function extractColorAndSize(row) {
-  let color = (row['색상']  ?? '').toString().trim();
-  let size  = (row['사이즈'] ?? '').toString().trim();
-  let combined = (row['색상/사이즈'] ?? '').toString().trim(); // 추가된 인식 로직
+  let color = String(row['색상'] || '').trim();
+  let size = String(row['사이즈'] || '').trim();
+  let mix = String(row['색상/사이즈'] || '').trim();
 
-  // '색상/사이즈' 컬럼이 있고, 개별 컬럼이 비어있을 경우 처리
-  if (!color && !size && combined) {
-    if (combined.includes('/')) {
-       const parts = combined.split('/').map(s => s.trim());
-       // 보통 "색상 / 사이즈" 순서
-       if (parts.length >= 2) {
+  // 1. [사이즈] 칸 정제 (예: "3XL / TS-S2406")
+  if (size.includes('/')) {
+      const parts = size.split('/').map(s => s.trim());
+      // 파트 중 '사이즈'처럼 생긴 것을 찾음 (이제 3XL도 찾음)
+      const sizeIdx = parts.findIndex(p => isSizeToken(p));
+      
+      if (sizeIdx !== -1) {
+          size = parts[sizeIdx]; // 사이즈만 남김 (코드 삭제)
+          // 만약 사이즈 앞부분에 색상이 있고, 색상칸이 비었다면 채움
+          if (sizeIdx > 0 && !color) color = parts[sizeIdx - 1];
+      } else {
+          // 사이즈를 못 찾았으면 맨 앞부분을 사이즈로 가정
+          size = parts[0];
+      }
+  }
+
+  // 2. [색상/사이즈] 통합 칸 분석
+  if (!color && !size && mix) {
+     const parts = mix.split('/').map(s => s.trim());
+     const sizeIdx = parts.findIndex(p => isSizeToken(p));
+     
+     if (sizeIdx !== -1) {
+         size = parts[sizeIdx];
+         if (sizeIdx > 0) color = parts[sizeIdx - 1];
+     } else if (parts.length >= 2) {
          color = parts[0];
          size = parts[1];
-       } else {
-         color = combined; 
-       }
-    } else {
-       // 슬래시가 없으면 사이즈인지 색상인지 추측
-       if (isSizeToken(combined)) size = combined;
-       else color = combined;
-    }
+     } else {
+         color = mix;
+     }
   }
 
-  const label = (row['제품선택'] || row['추가상품값'] || '').toString().trim();
-  const tokens = label ? label.split('/').map(s => s.trim()).filter(Boolean) : [];
-  const m = color.match(/^([A-Za-z0-9]+)\s*\/\s*(.+)$/);
+  // 3. [제품명] 분석 (01... 제거)
+  if (!color) {
+    const label = String(row['제품선택'] || row['추가상품값'] || '').trim();
+    if (label.includes('/')) {
+      const parts = label.split('/').map(s => s.trim());
+      const lastPart = parts[parts.length - 1];
+
+      if (isSizeToken(lastPart)) {
+        if (!size) size = lastPart;
+        if (parts.length >= 2) color = parts[parts.length - 2];
+      } else {
+        color = lastPart;
+      }
+    } else if (label.includes('_')) {
+       const parts = label.split('_');
+       const lastPart = parts[parts.length - 1].trim();
+       if (!isSizeToken(lastPart)) color = lastPart;
+    }
+  }
   
-  if (!size && m && isSizeToken(m[1])) {
-    size = m[1].trim();
-    for (let i = tokens.length - 1; i >= 0; i--) {
-      if (!isSizeToken(tokens[i])) { color = tokens[i]; break; }
-    }
-  }
-  if (!size && tokens.length) {
-    for (let i = tokens.length - 1; i >= 0; i--) {
-      if (isSizeToken(tokens[i])) { size = tokens[i]; break; }
-    }
-  }
-  if (!color && tokens.length) {
-    for (let i = tokens.length - 1; i >= 0; i--) {
-      if (!isSizeToken(tokens[i])) { color = tokens[i]; break; }
-    }
-  }
-  if (size && size.includes('/')) size = size.split('/')[0].trim();
-  return { color: color || '', size: size || '' };
+  return { color, size };
 }
-function isSizeToken(v){ return /^(FREE|XS|S|M|L|XL|XXL|\d{2,3})$/i.test(String(v||'').trim()); }
+
+// [수정] 사이즈 인식 범위 확대 (3XL, 4XL 등 포함)
+function isSizeToken(v) {
+  // 3XL, 4XL, 5XL... 또는 숫자(95, 100) 등을 정규식으로 체크
+  return /^(FREE|XS|S|M|L|XL|XXL|\d{1}XL|\d{2,3})$/i.test(String(v||'').trim());
+}
 const SIZE_ORDER = ['FREE','XS','S','M','L','XL','XXL'];
 function sizeKey(v){
   const u = String(v||'').toUpperCase().trim();
@@ -968,6 +1170,7 @@ async function handleFiles(filelist) {
   downloadBtn.disabled = false;
 }
 
+// [수정] 엑셀 파일 읽기 (헤더 행 자동 찾기 기능 추가)
 function readExcel(file) {
   return new Promise(resolve => {
     const reader = new FileReader();
@@ -975,80 +1178,100 @@ function readExcel(file) {
       const data = new Uint8Array(e.target.result);
       const wb = XLSX.read(data, {type:'array'});
       const ws = wb.Sheets[wb.SheetNames[0]];
-      let json = XLSX.utils.sheet_to_json(ws, {defval:""});
+      
+      // 1. 먼저 2차원 배열로 읽어서 '관리코드'가 있는 행(Row)을 찾습니다.
+      const rawData = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      let headerRowIndex = 0;
+      
+      // 최대 10번째 줄까지 뒤져서 "관리코드"나 "상품코드"가 있는지 확인
+      for (let i = 0; i < Math.min(rawData.length, 10); i++) {
+        const row = rawData[i];
+        // 행 안에 '관리코드' 또는 '상품코드'라는 글자가 포함된 셀이 있는지 검사
+        const hasCodeHeader = row.some(cell => {
+            const str = String(cell || '').replace(/\s+/g, ''); // 공백제거 비교
+            return str === '관리코드' || str === '상품코드' || str === '코드';
+        });
+        
+        if (hasCodeHeader) {
+          headerRowIndex = i; // 이 줄이 진짜 헤더다!
+          break;
+        }
+      }
+      
+      // 2. 찾은 헤더 행부터 다시 JSON으로 변환
+      // (defval: "" 옵션으로 빈 셀도 빈 문자열로 가져옴)
+      let json = XLSX.utils.sheet_to_json(ws, { range: headerRowIndex, defval: "" });
       resolve(json);
     };
     reader.readAsArrayBuffer(file);
   });
 }
 
-// [수정] 파일 통합 및 초기 품절 상태 계산
+// [수정] 데이터 병합 로직 (유연한 키 이름 찾기)
 function mergeAllRows() {
   allRows = [];
   let codeSet = new Set();
-  soldoutState = {}; 
+  soldoutState = {};
 
-  // 1. 데이터 통합
-  for (let {name, data} of fileDataArr) {
+  for (let { name, data } of fileDataArr) {
     data.forEach(row => {
-      const code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
+      // 1. 현재 행에서 '관리코드'에 해당하는 키(Key)를 찾습니다.
+      // (엑셀에 " 관리코드 " 처럼 공백이 있어도 찾을 수 있게 함)
+      const keys = Object.keys(row);
+      const codeKey = keys.find(k => {
+          const cleanKey = k.replace(/\s+/g, '');
+          return cleanKey === '관리코드' || cleanKey === '상품코드' || cleanKey === '코드';
+      });
+
+      // 2. 찾은 키로 값을 가져옴
+      const c = codeKey ? row[codeKey] : '';
+
       allRows.push({
         ...row,
         file: name,
-        관리코드: code,
-        _normCode: normCode(code)
+        관리코드: c, // 내부적으로는 무조건 '관리코드'로 통일
+        _normCode: normCode(c)
       });
-      if (code) codeSet.add(code);
+      
+      if (c) codeSet.add(c);
     });
   }
+  
   uniqueCodes = Array.from(codeSet);
 
-  // 2. 각 코드별 상태 자동 감지 (단종 및 재고 0 품절)
-  for (const code of uniqueCodes) {
-    // (A) 단종 감지
-    if (typeof code === 'string' && code.trim().startsWith('단종')) {
-      soldoutState[code] = { 전체: "discont", 복합: [] };
-      continue;
+  // (이하 품절 상태 자동 감지 로직은 기존과 동일)
+  uniqueCodes.forEach(code => {
+    if (String(code).trim().startsWith('단종')) {
+      soldoutState[code] = { 전체: 'discont', 복합: [] };
+      return;
     }
-
-    // (B) 재고 0 감지
     const rows = rowsByCode(code);
-    if (rows.length === 0) continue;
+    if (!rows.length) return;
 
-    let zeroOptions = [];
-    let totalCount = rows.length;
-    let zeroCount = 0;
+    let zeros = [];
+    rows.forEach(r => {
+      const stock = Number(r['재고수량']);
+      if (isNaN(stock) || stock <= 0) {
+        const { color, size } = extractColorAndSize(r);
+        zeros.push({ 색상: color, 사이즈: size, 상태: 'soldout' });
+      }
+    });
 
-    for (const r of rows) {
-       let stockVal = r['재고수량'];
-       let stock = (stockVal === '' || stockVal === null || stockVal === undefined) ? 0 : Number(stockVal);
-       
-       if (isNaN(stock) || stock <= 0) {
-         zeroCount++;
-         const { color, size } = extractColorAndSize(r);
-         zeroOptions.push({
-           색상: color,
-           사이즈: size,
-           상태: 'soldout'
-         });
-       }
-    }
-
-    if (totalCount > 0 && zeroCount === totalCount) {
-      soldoutState[code] = { 전체: "soldout", 복합: [] };
-    } else if (zeroCount > 0) {
-      const uniqueZero = [];
+    if (zeros.length === rows.length && rows.length > 0) {
+      soldoutState[code] = { 전체: 'soldout', 복합: [] };
+    } else if (zeros.length > 0) {
+      const uniq = [];
       const seen = new Set();
-      for (let opt of zeroOptions) {
-        const k = `${opt.색상}||${opt.사이즈}`;
+      zeros.forEach(z => {
+        const k = z.색상 + '|' + z.사이즈;
         if (!seen.has(k)) {
           seen.add(k);
-          uniqueZero.push(opt);
+          uniq.push(z);
         }
-      }
-      soldoutState[code] = { 전체: false, 복합: uniqueZero };
+      });
+      soldoutState[code] = { 전체: false, 복합: uniq };
     }
-  }
+  });
 }
 
 // [수정] 99999 설정 시 품절 상태도 리셋 (단, 이름이 '단종'인 것은 유지)
@@ -1188,137 +1411,127 @@ function renderContextPanel(code) {
   }
 }
 
-// [신규] 2단: 품절 모드 패널 렌더링 (일괄 품절 기능 포함)
+// [수정] 2단: 품절 모드 패널 렌더링
 function renderSoldoutPanel(container, code) {
-  const rows = rowsByCode(code);
-  let colorSet = new Set(), sizeSet = new Set();
-  rows.forEach(r => {
-    const { color, size } = extractColorAndSize(r);
-    if (color && color !== "") colorSet.add(color);
-    if (size && size !== "")  sizeSet.add(size);
-  });
-  const colors = Array.from(colorSet).filter(Boolean);
-  const sizes = Array.from(sizeSet).filter(Boolean).sort(compareSize);
+  const st = soldoutState[code] || {};
+  const isSold = st.전체 === 'soldout';
+  const isDisc = st.전체 === 'discont';
 
-  const state = soldoutState[code];
-  const isAllSoldout = state?.전체 === 'soldout';
-  const isAllDiscont = state?.전체 === 'discont';
-
-  let html = `
+  container.innerHTML = `
     <h2>${code}</h2>
     <div class="section-title">전체 옵션 처리</div>
     <div class="control-grid">
-      <button class="switch-btn ${isAllSoldout ? 'on' : ''}" onclick="setAllSoldout('${code}')">
-        ${isAllSoldout ? '전체품절 (ON)' : '전체 품절'}
-      </button>
-      <button class="switch-btn ${isAllDiscont ? 'on' : ''}" style="background-color: ${isAllDiscont ? '#856ed9' : ''};" onclick="setAllDiscont('${code}')">
-        ${isAllDiscont ? '전체단종 (ON)' : '전체 단종'}
-      </button>
+      <button class="switch-btn ${isSold?'on':''}" onclick="setAllSoldout('${code}')">전체 품절</button>
+      <button class="switch-btn ${isDisc?'on':''}" style="background:${isDisc?'#856ed9':''}; color:${isDisc?'#fff':''}" onclick="setAllDiscont('${code}')">전체 단종</button>
     </div>
-
     <div class="bulk-input-area">
-      <div class="bulk-input-title">일괄 품절 처리 (쉼표로 구분)</div>
       <div class="bulk-input-row">
-        <input type="text" id="bulkInput_${toSafeId(code)}" class="bulk-input" placeholder="예: 90, 95, 110, 품절...">
+        <input type="text" id="bulkInput_${toSafeId(code)}" class="bulk-input" placeholder="일괄 품절 (예: 90, 95)">
         <button class="bulk-btn" onclick="processBulkSoldout('${code}')">적용</button>
       </div>
     </div>
-
-    <div class="section-title" style="margin-top: 20px;">개별 옵션 처리</div>
-    <div style="font-size:12.5px; color:#555; margin-bottom: 10px;">
-      (클릭 순환: 품절 &rarr; 단종 &rarr; 해제)
-    </div>
-    <div class="option-btn-grid" id="optionBtnGrid_${toSafeId(code)}">
-      </div>
-    
-    <button class="reset-btn" style="width:100%; margin: 20px 0 10px 0;"
-            onclick="event.stopPropagation(); deleteCodeRows('${code}')">
-      ⚠️ 이 관리코드 행 전체 삭제
-    </button>
-    <button class="panel-close-btn" onclick="event.stopPropagation(); closeContextPanel()">
-      닫기
-    </button>
+    <div class="section-title">개별 옵션 (클릭: 품절→단종→해제)</div>
+    <div class="option-btn-grid" id="optGrid_${toSafeId(code)}"></div>
+    <button class="panel-close-btn" onclick="deleteCodeRows('${code}')">⚠️ 이 관리코드 행 전체 삭제</button>
   `;
-  container.innerHTML = html;
 
-  // --- 개별 옵션 버튼 생성 ---
-  const grid = container.querySelector(`#optionBtnGrid_${toSafeId(code)}`);
-  if (!grid) return;
+  const grid = document.getElementById(`optGrid_${toSafeId(code)}`);
+  const rows = rowsByCode(code);
+  let colors = new Set(), sizes = new Set();
+  
+  // 이제 3XL도 사이즈로 잘 인식해서 들어옵니다
+  rows.forEach(r => { 
+      const ex = extractColorAndSize(r); 
+      if(ex.color) colors.add(String(ex.color).trim()); 
+      if(ex.size) sizes.add(String(ex.size).trim()); 
+  });
+  
+  const cArr = [...colors].filter(Boolean);
+  const sArr = [...sizes].filter(Boolean).sort(compareSize);
 
-  function getState(code, color, size) {
-    const arr = soldoutState[code]?.복합 || [];
-    const nc = (color ?? '').trim();
-    const ns = (size  ?? '').trim();
-    return arr.find(o => (o.색상 ?? '').trim() === nc && (o.사이즈 ?? '').trim() === ns);
-  }
+  const createBtn = (c, s, lbl) => {
+    const btn = document.createElement('button'); 
+    btn.className = 'option-btn';
+    btn.textContent = lbl; 
+    
+    const safeC = String(c || '').trim();
+    const safeS = String(s || '').trim();
+    btn.dataset.color = safeC;
+    btn.dataset.size = safeS;
+    btn.dataset.label = lbl;
 
-  function createOptionBtn(color, size, label) {
-    const b = document.createElement('button');
-    b.className = 'option-btn';
-    b.textContent = label;
-    b.dataset.color = color || '';
-    b.dataset.size  = size  || '';
-    b.dataset.label = label || ''; // 검색용 텍스트 저장
-
-    // 초기 상태 도색
-    if (isAllSoldout) b.classList.add('selected');
-    else if (isAllDiscont) b.classList.add('discont');
+    if (isSold) btn.classList.add('selected');
+    else if (isDisc) btn.classList.add('discont');
     else {
-      let opt = getState(code, color, size);
-      if (opt?.상태 === 'discont') b.classList.add('discont');
-      else if (opt?.상태 === 'soldout') b.classList.add('selected');
+      const match = (st.복합||[]).find(x => {
+          // 1. 조합 매칭 (checkSizeMatch 사용)
+          if (x.색상 && x.사이즈) {
+              return x.색상 === safeC && checkSizeMatch(safeS, x.사이즈);
+          }
+          // 2. 키워드 매칭 (checkSizeMatch 사용)
+          const keyword = x.사이즈 || x.색상;
+          return (keyword === safeC || checkSizeMatch(safeS, keyword));
+      });
+
+      if (match?.상태 === 'soldout') btn.classList.add('selected');
+      if (match?.상태 === 'discont') btn.classList.add('discont');
     }
 
-    b.onclick = (e) => {
-      e.stopPropagation();
-      soldoutState[code] = soldoutState[code] || { 전체: false, 복합: [] };
-
-      // 전체 상태였으면 해제(개별로 전환)
-      if (soldoutState[code].전체 === "soldout" || soldoutState[code].전체 === "discont") {
-        soldoutState[code].전체 = false;
-      }
-
-      let idx = (soldoutState[code].복합 || []).findIndex(o => 
-        (o.색상 === color || (!color && !o.색상)) &&
-        (o.사이즈 === size || (!size && !o.사이즈))
-      );
-
-      if (idx < 0) { // 해제 -> 품절
-        soldoutState[code].복합.push(
-          color && size ? { 색상: color, 사이즈: size, 상태: "soldout" }
-          : color ?       { 색상: color, 상태: "soldout" }
-                  :       { 사이즈: size, 상태: "soldout" }
-        );
-      } else if (soldoutState[code].복합[idx].상태 === "soldout") { // 품절 -> 단종
-        soldoutState[code].복합[idx].상태 = "discont";
-      } else { // 단종 -> 해제
-        soldoutState[code].복합.splice(idx, 1);
-      }
-
-      checkAndAutoSetAllOptionState(code); // 전체 승격 여부 계산
-      updateSoldoutList(); // [3단] 갱신
-      updateCodeBtns();    // [1단] 갱신
-      renderSoldoutPanel(container, code); // [2단] 자신 갱신
+    btn.onclick = (e) => {
+        e.stopPropagation(); // 창 닫힘 방지
+        toggleOptionState(code, safeC, safeS, e.target); 
     };
-    grid.appendChild(b);
-  }
+    grid.appendChild(btn);
+  };
 
-  // 옵션 버튼 채우기
-  if (colors.length && sizes.length) {
-    colors.forEach(color => {
-      sizes.forEach(size => {
-        createOptionBtn(color, size, `${color} / ${size}`);
-      });
-    });
-  } else if (colors.length) {
-    colors.forEach(color => { createOptionBtn(color, '', color); });
-  } else if (sizes.length) {
-    sizes.forEach(size => { createOptionBtn('', size, size); });
-  } else {
-    grid.innerHTML = `<div class="opt-empty" style="grid-column: 1 / -1;">옵션을 찾을 수 없습니다.</div>`;
-  }
+  if (cArr.length && sArr.length) cArr.forEach(c => sArr.forEach(s => createBtn(c, s, `${c} / ${s}`)));
+  else if (cArr.length) cArr.forEach(c => createBtn(c, '', c));
+  else if (sArr.length) sArr.forEach(s => createBtn('', s, s));
+  else grid.innerHTML = '<div class="opt-empty" style="grid-column:1/-1;">옵션 없음</div>';
 }
 
+// [수정] 버튼 클릭 시 상태 토글 (화면 재렌더링 없이 즉시 반응)
+function toggleOptionState(code, c, s, btnElement) {
+  const strC = String(c || '').trim();
+  const strS = String(s || '').trim();
+
+  soldoutState[code] = soldoutState[code] || { 전체: false, 복합: [] };
+  
+  // 전체 설정이 되어있었다면 해제 (개별 모드로 전환)
+  if(soldoutState[code].전체) {
+      soldoutState[code].전체 = false;
+      // 전체가 해제되었으므로 화면의 모든 버튼 초기화 필요 -> 이 경우엔 전체 렌더링
+      renderSoldoutPanel(document.getElementById('contextArea'), code);
+      return; 
+  }
+  
+  const list = soldoutState[code].복합;
+  const idx = list.findIndex(o => String(o.색상||'').trim() === strC && String(o.사이즈||'').trim() === strS);
+  
+  let newState = ''; // none, soldout, discont
+
+  if(idx < 0) {
+      list.push({ 색상: strC, 사이즈: strS, 상태: 'soldout' });
+      newState = 'soldout';
+  } else if(list[idx].상태 === 'soldout') {
+      list[idx].상태 = 'discont';
+      newState = 'discont';
+  } else {
+      list.splice(idx, 1);
+      newState = 'none';
+  }
+  
+  // [핵심] 화면 전체를 다시 그리지 않고, 버튼 스타일만 변경 (깜빡임/스크롤튐 방지)
+  if (btnElement) {
+      btnElement.classList.remove('selected', 'discont');
+      if (newState === 'soldout') btnElement.classList.add('selected');
+      if (newState === 'discont') btnElement.classList.add('discont');
+  }
+
+  checkAutoTotal(code); 
+  updateCodeBtns();      // 왼쪽 코드 목록의 배지는 갱신
+  updateSoldoutList();   // 오른쪽 요약 목록 갱신
+}
 // [신규] 일괄 품절 처리 로직
 function processBulkSoldout(code) {
     const inputEl = document.getElementById(`bulkInput_${toSafeId(code)}`);
@@ -1755,49 +1968,161 @@ function updateProdCount() {
     ? `총 ${uniqueCodes.length}개 관리코드` : '';
 }
 
-// [수정됨] 다운로드 실행 함수 (실제 오타 수정 적용)
+
+
+
+
+// [수정] 엑셀 붙여넣기 처리 (단종/품절/텍스트 명확히 구분)
+function handlePaste(text) {
+  if (!text.trim()) return;
+
+  const rows = text.trim().split(/[\n\r]+/);
+  const container = document.getElementById('rowContainer');
+  container.innerHTML = ''; 
+
+  let processedCount = 0;
+
+  rows.forEach(rowStr => {
+    const cols = rowStr.split('\t'); 
+    if (cols.length < 1 || !cols[0].trim()) return;
+
+    const code = cols[0].trim();
+    const optionRaw = cols[1] ? cols[1].trim() : '';
+    
+    const div = document.createElement('div');
+    div.className = 'dynamic-row';
+    
+    let isDisc = false;
+    let finalOption = optionRaw;
+    
+    // 공백 제거 후 키워드 비교
+    const cleanOpt = optionRaw.replace(/\s+/g, '');
+
+    // 1. [전체 단종] 정확히 '단종'만 있을 때 -> 버튼 ON
+    if (cleanOpt === '단종') {
+       isDisc = true;
+       finalOption = ''; 
+    }
+    // 2. [전체 품절] '품절', '전체', '전량' 등 -> 버튼 OFF, 내용 비움(전체품절)
+    else if (['품절', '전체', '전체품절', '전량', '전량품절', '모두품절'].includes(cleanOpt)) {
+       isDisc = false;
+       finalOption = ''; 
+    }
+    // 3. [부분 옵션] '단종 블랙', '95', '블루 제외 전량' 등 -> 텍스트 그대로 입력
+    else {
+       isDisc = false;
+       finalOption = optionRaw; 
+    }
+
+    div.innerHTML = `
+      <input type="text" class="d-input d-code" value="${code}" placeholder="코드">
+      <input type="text" class="d-input d-opt" value="${finalOption}" placeholder="옵션 (예: 빨강, 단종 블랙)" ${isDisc ? 'disabled style="background:#f3f4f6;"' : ''}>
+      <button class="d-disc-btn ${isDisc ? 'active' : ''}" onclick="toggleDisc(this)">${isDisc ? '단종' : '단종'}</button>
+      <div class="d-del-btn" onclick="removeRow(this)">&times;</div>
+    `;
+
+    const inputs = div.querySelectorAll('input');
+    inputs.forEach(inp => {
+      inp.addEventListener('input', function() { checkAndAddRow(this); });
+      inp.addEventListener('keydown', function(e) { if(e.key === 'Enter') saveDynamicRows(); });
+    });
+
+    container.appendChild(div);
+    processedCount++;
+  });
+
+  addDynamicRow();
+  document.getElementById('excelPasteArea').value = '';
+}
+
+// 4. 자동 줄 추가 감지
+function checkAndAddRow(input) {
+  const row = input.closest('.dynamic-row');
+  // 마지막 줄에 글자를 쓰면 새 줄 추가
+  if(row === document.getElementById('rowContainer').lastElementChild && input.value.trim() !== '') {
+    addDynamicRow();
+  }
+}
+
+// 5. 단종 버튼 토글
+function toggleDisc(btn) {
+  btn.classList.toggle('active');
+  const row = btn.closest('.dynamic-row');
+  const opt = row.querySelector('.d-opt');
+  if(btn.classList.contains('active')) {
+    opt.disabled = true; opt.placeholder = "(전체 단종)"; opt.style.backgroundColor = "#f3f4f6"; opt.value = '';
+  } else {
+    opt.disabled = false; opt.placeholder = "옵션 (예: 빨강, 95)"; opt.style.backgroundColor = "#fff";
+  }
+}
+
+// 6. 줄 삭제
+function removeRow(btn) { btn.closest('.dynamic-row').remove(); }
+
+
+
+function closeModal() {
+  document.getElementById('dataModal').style.display = 'none';
+}
+
+// 모달 바깥 영역(어두운 배경) 클릭 시 닫기
+window.onclick = function(event) {
+  const modal = document.getElementById('dataModal');
+  if (event.target == modal) {
+    closeModal();
+  }
+  // (기존 body 클릭 이벤트와 충돌 방지를 위해 window.onclick 사용)
+}
+// [최종 수정] 다운로드 함수 (괄호 사이즈 매칭 적용)
 async function downloadFiles() {
   const report = buildValidationReport();
-
-  // 다운로드 버튼 누르면 실제 데이터 수정 적용 (Apply Fix = true)
-  if (report.typoFixes && report.typoFixes.count > 0) {
-      autoFixTypos(true); 
-  }
+  if (report.typoFixes && report.typoFixes.count > 0) autoFixTypos(true); 
 
   const msg = formatValidationSummary(report);
-  if (report.totals.issues > 0) {
-    if (!confirm(msg)) return;
-  }
+  if (report.totals.issues > 0) { if (!confirm(msg)) return; }
+
   const fillStock = document.getElementById('fillStockCheckbox').checked;
-  if (typeof JSZip === 'undefined') {
-    alert('JSZip 로드에 실패했습니다. 인터넷 연결/스크립트 경로를 확인하세요.');
-    return;
-  }
+  if (typeof JSZip === 'undefined') { alert('JSZip 로드 실패'); return; }
+  
   const mainZip = new JSZip();
+
   const codeOptionCount = {};
   for (const row of allRows) {
     const code = row['관리코드'] || row['상품코드'] || row['코드'] || '';
     if (!code) continue;
     codeOptionCount[code] ??= { total: 0, soldout: 0, discont: 0 };
     codeOptionCount[code].total++;
+    
     const target = soldoutState[code];
     let isSoldout = false, isDiscont = false;
+    
     if ((target?.복합 || []).length > 0) {
       const { color, size } = extractColorAndSize(row);
       for (const opt of target.복합) {
-        const matchColor = (!opt.색상 || color === opt.색상);
-        const matchSize  = (!opt.사이즈 || size  === opt.사이즈);
-        if (matchColor && matchSize) {
+        let match = false;
+        
+        // [수정됨] checkSizeMatch 사용
+        if (opt.색상 && opt.사이즈) {
+            match = (opt.색상 === color && checkSizeMatch(size, opt.사이즈));
+        } else {
+            const keyword = opt.사이즈 || opt.색상;
+            match = (color === keyword || checkSizeMatch(size, keyword));
+        }
+
+        if (match) {
           if (opt.상태 === 'discont') isDiscont = true;
           if (opt.상태 === 'soldout') isSoldout = true;
         }
       }
     }
+    
     if (target?.전체 === 'discont') isDiscont = true;
     else if (target?.전체 === 'soldout') isSoldout = true;
+    
     if (isDiscont) codeOptionCount[code].discont++;
     else if (isSoldout) codeOptionCount[code].soldout++;
   }
+
   for (const code in codeOptionCount) {
     const stat = codeOptionCount[code];
     if (stat.discont === stat.total) {
@@ -1813,61 +2138,943 @@ async function downloadFiles() {
     }
   }
   
-  // 오타 수정 후, 순번 다시 매기기 (이제 오타가 없으므로 정렬이 잘 됨)
-  renumberAllFiles();
-  
   const rowsByFile = {};
   for (const r of allRows) {
     const fname = r.file || '편집추가.xlsx';
     (rowsByFile[fname] ??= []).push(r);
   }
-  for (const name in rowsByFile) {
-    const data = rowsByFile[name];
-    const newData = data.map(row => {
+  
+  const fileNames = Object.keys(rowsByFile);
+  let singleFileBlob = null;     
+  let singleFileName = "";       
+  
+  for (const name of fileNames) {
+    const data = rowsByFile[name].map(row => {
       const codeKey = getCodeKey(row);
       const code = codeKey ? row[codeKey] : '';
       const target = soldoutState[code];
+      
       let isSoldout = false, isDiscont = false;
+
       if ((target?.복합 || []).length > 0) {
         const { color, size } = extractColorAndSize(row);
         for (const opt of target.복합) {
-          const matchColor = (!opt.색상 || color === opt.색상);
-          const matchSize  = (!opt.사이즈 || size  === opt.사이즈);
-          if (matchColor && matchSize) {
-            if (opt.상태 === 'discont') isDiscont = true;
-            if (opt.상태 === 'soldout') isSoldout = true;
-          }
+           let match = false;
+           // [수정됨] checkSizeMatch 사용
+           if (opt.색상 && opt.사이즈) {
+               match = (opt.색상 === color && checkSizeMatch(size, opt.사이즈));
+           } else {
+               const keyword = opt.사이즈 || opt.색상;
+               match = (color === keyword || checkSizeMatch(size, keyword));
+           }
+
+           if (match) {
+             if (opt.상태 === 'discont') isDiscont = true;
+             if (opt.상태 === 'soldout') isSoldout = true;
+           }
         }
       }
+
       if (target?.전체 === 'discont') isDiscont = true;
       else if (target?.전체 === 'soldout') isSoldout = true;
+      
       const rowCopy = { ...row };
+      
       if (isDiscont) {
-        if (codeKey) rowCopy[codeKey] = makeDiscontCode(rowCopy[codeKey]);
+        if (codeKey && rowCopy[codeKey] && !String(rowCopy[codeKey]).trim().startsWith('단종')) {
+             rowCopy[codeKey] = '단종 ' + rowCopy[codeKey];
+        }
         rowCopy['재고수량'] = 0;
       } else if (isSoldout || String(code || '').trim().startsWith('단종')) {
-        if (String(code || '').trim().startsWith('단종') && codeKey) {
-          rowCopy[codeKey] = makeDiscontCode(rowCopy[codeKey]);
-        }
         rowCopy['재고수량'] = 0;
       } else if (fillStock && (!rowCopy['재고수량'] || rowCopy['재고수량'] == 0)) {
         rowCopy['재고수량'] = 99999;
       }
+      
       delete rowCopy.file;
       delete rowCopy._normCode;
       return rowCopy;
     });
-    const ws = XLSX.utils.json_to_sheet(newData);
+    
+    const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
-    const xlsBlob = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-    const outName = name.endsWith('.xlsx') ? name : name.replace(/\.xls$/i, '.xlsx');
-    mainZip.file(outName, xlsBlob);
+    const wbOut = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    
+    const saveName = name.replace(/\.xls$/i, '.xlsx');
+    mainZip.file(saveName, wbOut);
+    
+    if (fileNames.length === 1) {
+        singleFileBlob = new Blob([wbOut], {type:"application/octet-stream"});
+        singleFileName = saveName;
+    }
   }
-  const outBlob = await mainZip.generateAsync({ type: 'blob' });
-  saveAs(outBlob, '품절처리_일괄다운로드.zip');
+  
+  if (fileNames.length === 1 && singleFileBlob) {
+      saveAs(singleFileBlob, singleFileName);
+  } else {
+      const zipBlob = await mainZip.generateAsync({ type: 'blob' });
+      saveAs(zipBlob, '품절처리_일괄다운로드.zip');
+  }
+  
+  let finishMsg = "✅ 파일 처리가 완료되었습니다.";
+  if(report.typoFixes && report.typoFixes.count > 0) {
+      finishMsg += `\n(오타 ${report.typoFixes.count}건이 자동 보정되었습니다)`;
+  }
+  showToast(finishMsg);
+}
+// === [신규] 데이터 영구 저장 및 자동 적용 로직 ===
+
+const STORAGE_KEY = "easyHara_soldout_data_v1"; // 저장소 키 이름
+
+// [수정] 저장값 적용 (0건이어도 알림 표시, 예외처리 강화)
+function applyFromBrowser(isAuto = false) {
+  // 1. 파일 업로드 여부 확인
+  if (uniqueCodes.length === 0) {
+    if (!isAuto) alert("적용할 엑셀 파일이 없습니다.\n먼저 파일을 업로드해주세요.");
+    return;
+  }
+
+  // 2. 저장된 데이터 확인
+  const savedJson = localStorage.getItem(STORAGE_KEY);
+  if (!savedJson) {
+    if (!isAuto) alert("브라우저에 저장된 데이터가 없습니다.\n[동기화저장]을 먼저 해주세요.");
+    return;
+  }
+
+  try {
+    const savedState = JSON.parse(savedJson);
+    let appliedCount = 0;
+
+    // 3. 현재 파일의 코드와 저장된 데이터 매칭
+    uniqueCodes.forEach(code => {
+      if (savedState[code]) {
+        soldoutState[code] = savedState[code]; // 상태 적용
+        appliedCount++;
+      }
+    });
+
+    // 4. 화면 갱신
+    updateCodeBtns();
+    updateSoldoutList();
+    if (selectedCode) renderContextPanel(selectedCode);
+
+    // 5. 결과 알림 (모달 메시지 + 팝업 알림)
+    const msg = `로드 완료: ${appliedCount}개 코드가 적용되었습니다.`;
+    
+    const statusEl = document.getElementById('saveStatusMsg');
+    if (statusEl) statusEl.textContent = msg;
+    
+    // [중요] 버튼으로 눌렀을 때(!isAuto)는 0건이어도 알려줌
+    if (!isAuto) {
+        if (appliedCount === 0) {
+            alert("저장된 데이터 중 현재 파일의 관리코드와 일치하는 항목이 없습니다.");
+        } else {
+            alert(msg);
+        }
+    }
+
+  } catch (e) {
+    console.error("데이터 로드 실패", e);
+    if (!isAuto) alert("데이터를 불러오는 중 오류가 발생했습니다.");
+  }
 }
 
+// 3. 저장된 데이터 삭제
+function clearBrowserData() {
+  if (!confirm("브라우저에 저장된 모든 품절/단종 기록을 삭제하시겠습니까?")) return;
+  localStorage.removeItem(STORAGE_KEY);
+  document.getElementById('saveStatusMsg').textContent = "🗑️ 저장된 데이터가 삭제되었습니다.";
+  alert("삭제되었습니다.");
+}
+
+// [중요] 파일 처리 함수(handleFiles) 수정
+// 기존 handleFiles 함수 끝부분에 자동 적용 로직을 연결해야 합니다.
+// 아래 코드를 기존 handleFiles 함수 마지막 부분(downloadBtn.disabled = false; 다음 줄)에 덮어쓰거나 추가하세요.
+
+/*
+  (기존 handleFiles 함수 내부...)
+  ...
+  fileCountElem.textContent = fileList.length > 1 ? `+${fileList.length}개` : '';
+  downloadBtn.disabled = false;
+  
+  // --- [추가된 부분] ---
+  const autoCheck = document.getElementById('autoApplyCheck');
+  if (autoCheck && autoCheck.checked) {
+    applyFromBrowser(true); // 자동으로 저장된 내역 적용
+  }
+  // -------------------
+*/
+// === [업데이트] 모달 관련 로직 ===
+
+function openModal() {
+  document.getElementById('dataModal').style.display = 'flex';
+  document.getElementById('saveStatusMsg').textContent = '';
+  refreshStorageList();
+  initDynamicRows();
+}
+
+// [수정] 목록 그리기 (검색 필터 기능 추가)
+function refreshStorageList(filterText = '') {
+  const container = document.getElementById('storageListContainer');
+  const countEl = document.getElementById('storageCount');
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){}
+  
+  container.innerHTML = '';
+  
+  // 키(관리코드) 가져오기
+  let keys = Object.keys(saved).sort();
+
+  // [핵심] 검색어가 있으면 필터링
+  if (filterText.trim() !== '') {
+    const query = filterText.toLowerCase().trim();
+    keys = keys.filter(key => key.toLowerCase().includes(query));
+  }
+
+  countEl.textContent = `${keys.length}개`;
+  
+  if(!keys.length) { 
+    const msg = filterText ? '검색 결과가 없습니다.' : '저장된 데이터가 없습니다.';
+    container.innerHTML = `<div style="padding:20px; text-align:center; color:#aaa; font-size:13px;">${msg}</div>`; 
+    return; 
+  }
+
+  keys.forEach(code => {
+    const item = saved[code];
+    let contentHtml = '';
+
+    // 배지 생성 로직
+    if (item.전체 === 'soldout') {
+      contentHtml = '<span class="item-badge badge-sold">전체품절</span>';
+    } else if (item.전체 === 'discont') {
+      contentHtml = '<span class="item-badge badge-disc">전체단종</span>';
+    } else if ((item.복합 || []).length > 0) {
+      contentHtml = '<div class="opt-detail-wrap">';
+      item.복합.forEach(opt => {
+        const isDisc = opt.상태 === 'discont';
+        const cls = isDisc ? 'disc' : 'sold';
+        const labelState = isDisc ? '단종' : '품절';
+        const name = (opt.색상 && opt.사이즈) ? `${opt.색상}-${opt.사이즈}` : (opt.사이즈 || opt.색상);
+        contentHtml += `<div class="opt-chip ${cls}">${name} <span>${labelState}</span></div>`;
+      });
+      contentHtml += '</div>';
+    } else {
+      contentHtml = '<span class="item-badge" style="background:#eee; color:#777;">설정없음</span>';
+    }
+
+    const div = document.createElement('div');
+    div.className = 'storage-item';
+    
+    // 검색어 하이라이트 (선택사항)
+    const displayCode = filterText ? code.replace(new RegExp(filterText, 'gi'), match => `<span style="background:#fff7ed; color:#c2410c;">${match}</span>`) : code;
+
+    div.innerHTML = `
+      <div class="item-info" style="width:100%;" onclick="loadItemForEdit('${code}')" title="클릭해서 수정하기">
+        <div class="item-code" style="margin-bottom:2px;">${displayCode}</div>
+        <div>${contentHtml}</div>
+      </div>
+      <div class="delete-icon-btn" title="삭제" onclick="deleteSingleStorageItem('${code}')">
+        &times;
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// [신규] 선택된 항목 일괄 삭제
+function deleteSelectedItems() {
+  const checkboxes = document.querySelectorAll('.item-chk:checked');
+  if (checkboxes.length === 0) {
+    alert("삭제할 항목을 선택하세요.");
+    return;
+  }
+
+  if (!confirm(`선택한 ${checkboxes.length}개 항목을 삭제하시겠습니까?`)) return;
+
+  let saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  
+  checkboxes.forEach(chk => {
+    delete saved[chk.value];
+  });
+
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+  refreshStorageList();
+}
+
+// [신규] 수정하기 (데이터를 입력창으로 불러옴)
+function loadItemForEdit(code) {
+  let saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  const item = saved[code];
+  if (!item) return;
+
+  // 1. 입력창 초기화 (기존 내용 비우고 1줄만 남김)
+  initDynamicRows();
+  
+  // 2. 첫 번째 줄 가져오기
+  const row = document.querySelector('.dynamic-row');
+  const codeInput = row.querySelector('.d-code');
+  const optInput = row.querySelector('.d-opt');
+  const discBtn = row.querySelector('.d-disc-btn');
+
+  // 3. 데이터 채워넣기
+  codeInput.value = code; // 관리코드
+
+  if (item.전체 === 'discont') {
+    // 전체 단종인 경우
+    if (!discBtn.classList.contains('active')) toggleDisc(discBtn);
+  } else if (item.전체 === 'soldout') {
+    // 전체 품절인 경우 (옵션 빈칸, 버튼 OFF)
+    if (discBtn.classList.contains('active')) toggleDisc(discBtn);
+    optInput.value = "";
+  } else if (item.복합 && item.복합.length > 0) {
+    // 부분 옵션인 경우 -> 텍스트로 변환하여 입력창에 넣음
+    // 예: [{색상:'블랙', 사이즈:'95', 상태:'soldout'}] -> "블랙-95"
+    const textParts = item.복합.map(opt => {
+      let str = "";
+      // 색상-사이즈 조합인지, 단일 키워드인지 확인
+      if (opt.색상 && opt.사이즈) {
+        str = `${opt.색상}-${opt.사이즈}`;
+      } else {
+        str = opt.사이즈 || opt.색상;
+      }
+      // 단종 상태면 접두어 붙임
+      if (opt.상태 === 'discont') {
+        str = `단종-${str}`;
+      }
+      return str;
+    });
+    
+    optInput.value = textParts.join(', '); // 콤마로 연결해서 입력창에 표시
+  }
+
+  // 4. 사용자에게 알림 및 스크롤 이동
+  // (모달 내부 스크롤을 맨 위로)
+  document.querySelector('.manual-scroll-box').scrollTop = 0;
+  
+  // 시각적 효과 (입력창 깜빡임 등)
+  row.style.transition = "background 0.3s";
+  row.style.background = "#e6fffa";
+  setTimeout(() => row.style.background = "transparent", 500);
+}
+
+// === [수정] 스마트 붙여넣기 로직 (직접 입력창에 붙여넣기) ===
+
+// 1. 초기화
+function initDynamicRows() {
+  const container = document.getElementById('rowContainer');
+  container.innerHTML = '';
+  addDynamicRow(true); // 기본 1줄 생성
+}
+
+// [수정] 줄 추가 함수 (입력 시 실시간 검색 기능 추가됨)
+function addDynamicRow(isFirst = false) {
+  const container = document.getElementById('rowContainer');
+  const div = document.createElement('div');
+  div.className = 'dynamic-row';
+  div.innerHTML = `
+    <input type="text" class="d-input d-code" placeholder="코드 (예: P-001)">
+    <input type="text" class="d-input d-opt" placeholder="옵션 (예: 블랙-95, 단종 네이비-100)">
+    <button class="d-disc-btn" onclick="toggleDisc(this)">단종</button>
+    <div class="d-del-btn ${isFirst ? 'disabled' : ''}" onclick="removeRow(this)">&times;</div>
+  `;
+  
+  // 1. 관리코드 입력창 가져오기
+  const codeInput = div.querySelector('.d-code');
+
+  // [이벤트 1] 붙여넣기 감지 (스마트 붙여넣기)
+  codeInput.addEventListener('paste', function(e) { 
+      handleSmartPaste(e, div); 
+  });
+
+  // [이벤트 2] 입력 감지 (★ 여기가 수정됨: 자동 줄 추가 + 실시간 검색)
+  codeInput.addEventListener('input', function() {
+      checkAndAddRow(this);           // 줄 추가 확인
+      refreshStorageList(this.value); // ★ 입력된 값으로 아래 목록 검색
+  });
+
+  // 2. 나머지 입력창 이벤트 (옵션창 등)
+  const inputs = div.querySelectorAll('input');
+  inputs.forEach(inp => {
+    // 관리코드가 아닌 다른 입력창은 줄 추가 기능만 수행
+    if (!inp.classList.contains('d-code')) {
+        inp.addEventListener('input', function() { checkAndAddRow(this); });
+    }
+    // 엔터키 저장 기능
+    inp.addEventListener('keydown', function(e) { if(e.key === 'Enter') saveDynamicRows(); });
+  });
+
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+// [수정] 스마트 붙여넣기 (관리코드 열의 '단종' 접두어 자동 인식 추가)
+function handleSmartPaste(e, currentRow) {
+  const text = (e.clipboardData || window.clipboardData).getData('text');
+  if (!text.includes('\n') && !text.includes('\t')) return;
+  e.preventDefault();
+  
+  const rows = text.trim().split(/[\n\r]+/);
+  const container = document.getElementById('rowContainer');
+  
+  rows.forEach((rowStr, i) => {
+    const cols = rowStr.split('\t');
+    let code = cols[0] ? cols[0].trim() : ''; // 관리코드
+    let opt = cols[1] ? cols[1].trim() : '';  // 품절옵션
+    
+    if (!code) return;
+
+    let isDisc = false;
+
+    // [추가된 기능] 관리코드 자체가 "단종 ..."으로 시작하는지 확인
+    if (code.startsWith('단종')) {
+        isDisc = true; // 단종 버튼 ON
+        // "단종 K2-90" -> "K2-90"으로 글자만 발라내기
+        code = code.replace(/^단종\s*/, '').trim(); 
+        opt = ''; // 전체 단종이므로 옵션 내용은 무시
+    }
+
+    let targetRow;
+    if (i === 0) {
+      targetRow = currentRow;
+    } else { 
+      addDynamicRow(); 
+      targetRow = container.lastElementChild; 
+    }
+    
+    // 기존 로직 (옵션칸에 "품절/단종" 적혀있는지 확인) + 위에서 찾은 isDisc 합치기
+    fillRowData(targetRow, code, opt, isDisc);
+  });
+
+  addDynamicRow();
+}
+
+// [수정] fillRowData 함수도 파라미터 추가 필요 (isDiscForce)
+function fillRowData(rowElement, code, optionRaw, isDiscForce = false) {
+  const codeInput = rowElement.querySelector('.d-code');
+  const optInput = rowElement.querySelector('.d-opt');
+  const discBtn = rowElement.querySelector('.d-disc-btn');
+
+  codeInput.value = code;
+  const cleanOpt = optionRaw.replace(/\s+/g, '');
+
+  // 1. 코드 자체에 '단종'이 붙어있었거나(isDiscForce), 옵션칸에 '단종'이라고 쓴 경우
+  if (isDiscForce || cleanOpt === '단종') {
+      if (!discBtn.classList.contains('active')) toggleDisc(discBtn);
+  } 
+  // 2. 옵션칸에 '품절', '전체' 등이 있는 경우
+  else if (['품절', '전체', '전체품절', '전량', '전량품절'].includes(cleanOpt)) {
+      if (discBtn.classList.contains('active')) toggleDisc(discBtn); // 단종버튼은 끔
+      optInput.value = ''; // 내용은 비움 (전체품절)
+  } 
+  // 3. 일반 부분옵션인 경우
+  else {
+      if (discBtn.classList.contains('active')) toggleDisc(discBtn);
+      optInput.value = optionRaw;
+  }
+}
+
+
+// 자동 행 추가 감지
+function checkAndAddRow(inputElement) {
+  const row = inputElement.closest('.dynamic-row');
+  const container = document.getElementById('rowContainer');
+  
+  // 현재 입력 중인 행이 마지막 행인지 확인
+  if (row === container.lastElementChild) {
+    // 내용이 조금이라도 있으면 새 줄 추가
+    if (inputElement.value.trim() !== '') {
+      addDynamicRow();
+    }
+  }
+}
+
+// 단종 버튼 토글
+function toggleDisc(btn) {
+  btn.classList.toggle('active');
+  const row = btn.closest('.dynamic-row');
+  const optInput = row.querySelector('.d-opt');
+  
+  if (btn.classList.contains('active')) {
+    optInput.disabled = true;
+    optInput.placeholder = "(전체 단종 설정됨)";
+    optInput.style.backgroundColor = "#f3f4f6";
+  } else {
+    optInput.disabled = false;
+    optInput.placeholder = "옵션 (예: 빨강, 95)";
+    optInput.style.backgroundColor = "#fff";
+  }
+}
+
+// 행 삭제
+function removeRow(btn) {
+  const row = btn.closest('.dynamic-row');
+  row.remove();
+}
+
+// [최종 수정] 저장 로직 (괄호 분리 저장 기능 강화)
+function saveDynamicRows() {
+  const rows = document.querySelectorAll('.dynamic-row');
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){}
+  
+  let newCount = 0;
+  let updateCount = 0; 
+
+  rows.forEach(row => {
+    const code = row.querySelector('.d-code').value.trim();
+    const optRaw = row.querySelector('.d-opt').value.trim();
+    const isDiscBtn = row.querySelector('.d-disc-btn').classList.contains('active');
+    
+    if(!code) return;
+
+    if (saved[code]) updateCount++; else newCount++;
+    
+    // 1. [전체 단종]
+    if(isDiscBtn) {
+      saved[code] = { 전체: 'discont', 복합: [] };
+    } 
+    // 2. [부분 옵션]
+    else if(optRaw) {
+      if(saved[code]?.전체) saved[code].전체 = false;
+      saved[code] = { 전체: false, 복합: [] }; // 덮어쓰기 모드
+      
+      // 콤마로 여러 옵션 분리
+      const tokens = optRaw.split(',').map(s=>s.trim()).filter(s=>s);
+      
+      tokens.forEach(t => {
+        let status = 'soldout'; 
+        let val = t;
+
+        // "단종" 키워드 처리
+        if (val.startsWith('단종')) {
+            status = 'discont';
+            val = val.replace('단종', '').trim();
+            val = val.replace(/^[-/ ]+/, ''); // 앞쪽 특수문자 제거
+        }
+
+        // 1단계: 색상/사이즈 분리 (하이픈 or 슬래시)
+        let color = '';
+        let sizeRaw = val;
+        
+        let separator = '';
+        if (val.includes('/')) separator = '/';
+        else if (val.includes('-')) separator = '-';
+
+        if (separator) {
+            const idx = val.lastIndexOf(separator);
+            color = val.substring(0, idx).trim();
+            sizeRaw = val.substring(idx + 1).trim();
+        }
+
+        // 2단계: 사이즈 괄호 분리 로직 (105(XL) -> 105, XL)
+        // 괄호 패턴: "값(값)"
+        let sizesToSave = [];
+        const parenMatch = sizeRaw.match(/^([^(]+)\s*\(\s*([^)]+)\s*\)$/);
+        
+        if (parenMatch) {
+            // 괄호가 있으면 [괄호앞, 괄호안] 둘 다 저장 목록에 추가
+            sizesToSave.push(parenMatch[1].trim());
+            sizesToSave.push(parenMatch[2].trim());
+        } else {
+            // 괄호 없으면 그냥 원본 그대로
+            sizesToSave.push(sizeRaw);
+        }
+
+        // 3단계: 최종 저장 (분리된 사이즈 개수만큼)
+        sizesToSave.forEach(finalSize => {
+            // 중복 방지 후 추가
+            const newOpt = { 색상: color, 사이즈: finalSize, 상태: status };
+            
+            // 이미 똑같은 설정이 있는지 확인
+            const exists = saved[code].복합.some(o => 
+                o.색상 === newOpt.색상 && 
+                o.사이즈 === newOpt.사이즈 && 
+                o.상태 === newOpt.상태
+            );
+            
+            if (!exists) {
+              saved[code].복합.push(newOpt);
+            }
+        });
+      });
+    } 
+    // 3. [전체 품절]
+    else {
+      saved[code] = { 전체: 'soldout', 복합: [] };
+    }
+  });
+  
+  if(newCount === 0) { showToast('저장할 내용이 없습니다.'); return; }
+  
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+  refreshStorageList();
+  initDynamicRows();
+  
+  let msg = "✅ 저장 완료!";
+  if (newCount > 0) msg += ` (신규: ${newCount}건)`;
+  if (updateCount > 0) msg += ` (수정: ${updateCount}건)`;
+  document.getElementById('saveStatusMsg').innerText = msg;
+}
+
+// [신규] 목록에서 개별 삭제 함수
+function deleteSingleStorageItem(code) {
+  if (!confirm(`'${code}' 설정을 저장소에서 삭제하시겠습니까?`)) return;
+  
+  let savedState = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  delete savedState[code];
+  
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(savedState));
+  refreshStorageList(); // 목록 다시 그리기
+}
+
+// [수정 후] 저장 로직 (덮어쓰기 방지 -> 병합/추가 모드)
+function saveToBrowser() {
+  // 1. 현재 작업 중인 내용이 없으면 알림
+  if (Object.keys(soldoutState).length === 0) {
+    alert("현재 작업 중인 품절/단종 내역이 없습니다.\n먼저 왼쪽 화면에서 품절 설정을 진행해주세요.");
+    return;
+  }
+
+  // 2. 기존에 저장된 데이터 불러오기
+  let savedData = {};
+  try {
+    savedData = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  } catch(e) {
+    savedData = {};
+  }
+
+  // 3. 데이터 병합 (Merge)
+  let addedCount = 0;
+  let updatedCount = 0;
+
+  for (const code in soldoutState) {
+    if (savedData[code]) {
+      updatedCount++; // 이미 있으면 업데이트
+    } else {
+      addedCount++;   // 없으면 신규 추가
+    }
+    // 현재 작업 내용을 저장소 데이터에 덮어씌움 (업데이트)
+    savedData[code] = soldoutState[code];
+  }
+
+  // 4. 합쳐진 데이터를 다시 저장
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(savedData));
+
+  // 5. 목록 갱신 및 알림
+  refreshStorageList();
+  
+  showToast(`✅ 저장 완료! (신규:${newCount}, 수정:${updateCount})`);
+}
+
+// === [신규] 데이터 엑셀 백업(내보내기) 및 복원(불러오기) ===
+
+// 1. 엑셀로 내보내기 (Export)
+function exportDataToExcel() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){}
+  
+  if (Object.keys(saved).length === 0) {
+    alert("내보낼 데이터가 없습니다.");
+    return;
+  }
+
+  // 엑셀용 데이터 변환
+  const exportData = [];
+  
+  for (const code in saved) {
+    const item = saved[code];
+    let statusText = "";
+    let optionsText = "";
+
+    if (item.전체 === 'discont') {
+      statusText = "전체단종";
+    } else if (item.전체 === 'soldout') {
+      statusText = "전체품절";
+    } else {
+      statusText = "부분설정";
+      // 복합 옵션을 문자열로 변환 (예: "단종-블랙-95, 화이트-100")
+      const parts = item.복합.map(opt => {
+        let str = "";
+        // 색상/사이즈 조합
+        if (opt.색상 && opt.사이즈) str = `${opt.색상}-${opt.사이즈}`;
+        else str = opt.사이즈 || opt.색상;
+        
+        // 단종 여부
+        if (opt.상태 === 'discont') str = `단종-${str}`;
+        return str;
+      });
+      optionsText = parts.join(', ');
+    }
+
+    exportData.push({
+      "관리코드": code,
+      "상태": statusText,
+      "상세옵션": optionsText
+    });
+  }
+
+  // 엑셀 파일 생성
+  const ws = XLSX.utils.json_to_sheet(exportData);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "품절단종데이터");
+  XLSX.writeFile(wb, `품절데이터백업_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// [최종 수정] 엑셀 불러오기 (괄호 분리 로직 추가됨)
+function importDataFromExcel(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const data = new Uint8Array(e.target.result);
+    const wb = XLSX.read(data, {type: 'array'});
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json(ws);
+
+    if (jsonData.length === 0) {
+      alert("데이터가 없는 파일입니다.");
+      return;
+    }
+
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch(e){}
+    
+    let successCount = 0;
+
+    jsonData.forEach(row => {
+      const code = row['관리코드'] || row['상품코드'] || row['코드'];
+      const status = row['상태'];     
+      const details = row['상세옵션']; 
+
+      if (!code) return;
+
+      let newItem = { 전체: false, 복합: [] };
+
+      if (status === '전체단종') {
+        newItem.전체 = 'discont';
+      } else if (status === '전체품절') {
+        newItem.전체 = 'soldout';
+      } else if (details) {
+        // 콤마로 1차 분리
+        const tokens = details.split(',').map(s => s.trim()).filter(s => s);
+        
+        tokens.forEach(t => {
+          let optState = 'soldout';
+          let val = t;
+          
+          // 단종 접두어 처리
+          if (val.startsWith('단종')) { 
+             optState = 'discont'; 
+             val = val.replace('단종', '').trim(); 
+             val = val.replace(/^[-/ ]+/, '');
+          }
+
+          let color = '', sizeRaw = val;
+          
+          // 하이픈(-)으로 색상/사이즈 분리
+          if (val.includes('-')) {
+            const idx = val.lastIndexOf('-');
+            color = val.substring(0, idx).trim();
+            sizeRaw = val.substring(idx + 1).trim();
+          } 
+
+          // [추가됨] 괄호 분리 로직 (105(XL) -> 105, XL)
+          let subValues = [];
+          const parenMatch = sizeRaw.match(/^([^(]+)\s*\(\s*([^)]+)\s*\)$/);
+          
+          if (parenMatch) {
+              subValues = [parenMatch[1].trim(), parenMatch[2].trim()];
+          } else {
+              subValues = [sizeRaw];
+          }
+
+          // 분리된 값들을 각각 저장
+          subValues.forEach(finalSize => {
+              newItem.복합.push({ 
+                  색상: color, 
+                  사이즈: finalSize, 
+                  상태: optState 
+              });
+          });
+        });
+      }
+
+      // 데이터 병합 (덮어쓰기)
+      saved[code] = newItem;
+      successCount++;
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+    refreshStorageList();
+    initDynamicRows();
+    
+    alert(`✅ ${successCount}건의 데이터를 불러와서 합쳤습니다.`);
+    input.value = ''; 
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// [최종 수정] 사이즈 매칭 헬퍼 (괄호 양방향 인식 강화)
+function checkSizeMatch(rowSize, targetKey) {
+  // 1. 공백 제거 및 대문자 변환 (소문자 xl과 대문자 XL도 같게 인식)
+  const rS = String(rowSize).replace(/\s+/g, '').toUpperCase(); 
+  const tK = String(targetKey).replace(/\s+/g, '').toUpperCase();
+
+  // 2. 정확히 일치하면 통과 (예: "XL" == "XL")
+  if (rS === tK) return true;
+  
+  // 정규식: "값(괄호안내용)" 형태 분리
+  const regex = /^([^(]+)\(([^)]+)\)$/;
+
+  // 3. Case A: 엑셀 데이터(rS)가 "105(XL)" 형태일 때 -> "105"나 "XL"이 저장되어 있으면 통과
+  let m = rS.match(regex);
+  if (m) {
+      const main = m[1]; // 괄호 앞
+      const sub = m[2];  // 괄호 안
+      if (main === tK || sub === tK) return true;
+  }
+
+  // 4. Case B: 저장된 데이터(tK)가 "105(XL)" 형태일 때 -> 엑셀에 "105"나 "XL"이 있으면 통과
+  // (★ 지금 고객님 상황 해결하는 부분)
+  m = tK.match(regex);
+  if (m) {
+      const main = m[1]; // 105
+      const sub = m[2];  // XL
+      if (main === rS || sub === rS) return true;
+  }
+  
+  return false;
+}
+
+// [추가] 옵션 목록에서 중복 제거하여 유니크한 옵션만 추출하는 함수
+function getUniqueOptions(rows) {
+  const map = new Map();
+  rows.forEach(r => {
+    const ex = extractColorAndSize(r);
+    // 키워드 생성 (색상|사이즈)
+    const key = ex.color + '|' + ex.size;
+    if (!map.has(key)) {
+      map.set(key, { color: ex.color, size: ex.size });
+    }
+  });
+  // 정렬 후 반환 (색상순 -> 사이즈순)
+  return Array.from(map.values()).sort((a, b) => 
+    a.color.localeCompare(b.color) || compareSize(a.size, b.size)
+  );
+}
+
+// [추가] 개별 옵션 변경 시 전체 상태 자동 계산 (현재는 빈 함수로 두어 에러 방지)
+function checkAutoTotal(code) {
+  // 이 함수는 개별 옵션을 모두 품절 처리했을 때 자동으로 '전체 품절'로 바꿀지 결정하는 로직인데,
+  // 사용자의 의도치 않은 자동 변경을 막기 위해 로직은 비워두고 에러만 안 나게 합니다.
+  // 필요하다면 나중에 로직을 채워 넣을 수 있습니다.
+}
+
+// [추가 1] 개별 옵션 변경 시 전체 상태 확인 함수 (에러 해결용)
+function checkAutoTotal(code) {
+  // 현재는 에러를 방지하기 위해 빈 함수로 둡니다.
+  // (개별 옵션을 모두 품절시켰을 때 '전체 품절'로 자동 승격시키는 기능이 필요 없으시면 비워두셔도 됩니다.)
+}
+
+// [추가 2] 사이즈 괄호 인식 함수 ("105(XL)" -> 105 또는 XL 매칭)
+function checkSizeMatch(rowSize, targetKey) {
+  // 1. 공백 제거 후 정확히 일치하면 통과
+  const rS = String(rowSize).replace(/\s+/g, ''); 
+  const tK = String(targetKey).replace(/\s+/g, '');
+
+  if (rS === tK) return true;
+  
+  // 2. "값(괄호)" 형태인지 분석
+  const m = rS.match(/^([^(]+)\(([^)]+)\)$/);
+  if (m) {
+      const main = m[1]; // 괄호 앞 (예: 105)
+      const sub = m[2];  // 괄호 안 (예: XL)
+      
+      // 저장된 키워드가 앞부분이나 뒷부분과 같으면 통과
+      if (main === tK || sub === tK) return true;
+  }
+  
+  return false;
+}
+// 토스트 메시지 띄우기 함수
+function showToast(message) {
+  const toast = document.getElementById("toast");
+  toast.className = "show";
+  toast.innerText = message;
+  
+  // 3초 후에 사라지게 설정
+  setTimeout(function(){ 
+    toast.className = toast.className.replace("show", ""); 
+  }, 3000);
+}
   </script>
+<div id="dataModal" class="modal-overlay">
+    <div class="modal-content" style="width: 550px; max-width: 95vw;">
+      <div class="modal-header">
+        <span>품절/단종 데이터 관리</span>
+        <span class="modal-close-icon" onclick="closeModal()">&times;</span>
+      </div>
+
+      <div class="manual-add-area">
+        <div style="font-size:13px; font-weight:700; color:#2c6e58; margin-bottom:6px; display:flex; justify-content:space-between;">
+          <span>⚡ 관리코드 및 옵션 등록</span>
+          <span style="font-size:11px; color:#888; font-weight:400;">(코드 칸에 엑셀 내용을 붙여넣으세요)</span>
+        </div>
+        
+        <div style="display:flex; gap:6px; padding:0 6px; margin-bottom:4px; font-size:12px; color:#555; font-weight:600;">
+          <div style="flex:1;">관리코드</div>
+          <div style="flex:1.8;">품절옵션 (예: 블랙-95, 단종-100)</div>
+          <div style="width:50px; text-align:center;">상태</div>
+          <div style="width:20px;"></div>
+        </div>
+
+        <div id="rowContainer" class="manual-scroll-box"></div>
+
+        <div style="text-align:right; margin-top:10px;">
+           <button class="manual-btn" onclick="saveDynamicRows()">리스트에 추가(저장)</button>
+        </div>
+      </div>
+      
+      <div class="storage-ctrl-bar">
+        <div>
+          <span style="font-size:13px; font-weight:600; color:#444;">저장된 목록</span>
+          <span id="storageCount" style="font-size:12px; color:#888;">0개</span>
+        </div>
+        <button class="del-sel-btn" onclick="deleteSelectedItems()">선택 삭제</button>
+      </div>
+      
+      <div class="storage-list-area" id="storageListContainer">
+        <div style="padding:20px; text-align:center; color:#aaa; font-size:13px;">저장된 데이터가 없습니다.</div>
+      </div>
+
+      <div class="modal-row">
+         <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+          <input type="checkbox" id="autoApplyCheck" checked> 파일 열 때 이 데이터 자동 적용
+        </label>
+      </div>
+      <div id="saveStatusMsg" style="font-size:12px; color:#2c6e58; margin-bottom:8px; height:16px;"></div>
+      
+      <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <button class="switch-btn" style="flex:1; margin:0;" onclick="saveToBrowser()">동기화저장</button>
+        <button class="switch-btn" style="flex:1; margin:0; background:#fff;" onclick="applyFromBrowser()">현재 파일에 적용</button>
+      </div>
+
+      <div style="border-top:1px dashed #ddd; padding-top:12px; display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-size:12px; color:#666;">📂 데이터 백업</div>
+        <div style="display:flex; gap:6px;">
+            <button class="del-sel-btn" style="background:#f0f9ff; border-color:#bae6fd; color:#0284c7;" onclick="exportDataToExcel()">엑셀로 내보내기</button>
+            <button class="del-sel-btn" style="background:#fff; border-color:#bae6fd; color:#0284c7;" onclick="document.getElementById('backupFileInput').click()">불러오기</button>
+            <input type="file" id="backupFileInput" style="display:none;" accept=".xlsx, .xls" onchange="importDataFromExcel(this)">
+        </div>
+      </div>
+
+      <div style="margin-top:12px; text-align:right;">
+        <button class="reset-btn" style="padding:6px 10px; font-size:12px;" onclick="clearBrowserData()">🗑️ 전체 삭제</button>
+      </div>
+    </div>
+  </div>
+  <div id="toast"></div>
 </body>
 </html>
