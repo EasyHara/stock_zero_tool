@@ -2707,7 +2707,7 @@ function deleteSingleStorageItem(code) {
   refreshStorageList(); // 목록 다시 그리기
 }
 
-// [수정 후] 저장 로직 (덮어쓰기 방지 -> 병합/추가 모드)
+// [수정 완료] 동기화 저장 (덮어쓰기 방지 -> 병합/추가 모드) + 변수 오류 해결
 function saveToBrowser() {
   // 1. 현재 작업 중인 내용이 없으면 알림
   if (Object.keys(soldoutState).length === 0) {
@@ -2723,15 +2723,15 @@ function saveToBrowser() {
     savedData = {};
   }
 
-  // 3. 데이터 병합 (Merge)
-  let addedCount = 0;
-  let updatedCount = 0;
+  // 3. 데이터 병합 (Merge) & 카운팅 변수 선언 (이게 빠져서 에러가 났었습니다)
+  let newCount = 0;    // 신규 추가 건수
+  let updateCount = 0; // 수정 건수
 
   for (const code in soldoutState) {
     if (savedData[code]) {
-      updatedCount++; // 이미 있으면 업데이트
+      updateCount++; // 이미 있으면 업데이트
     } else {
-      addedCount++;   // 없으면 신규 추가
+      newCount++;    // 없으면 신규 추가
     }
     // 현재 작업 내용을 저장소 데이터에 덮어씌움 (업데이트)
     savedData[code] = soldoutState[code];
@@ -2743,7 +2743,8 @@ function saveToBrowser() {
   // 5. 목록 갱신 및 알림
   refreshStorageList();
   
-  showToast(`✅ 저장 완료! (신규:${newCount}, 수정:${updateCount})`);
+  // 토스트 메시지 출력
+  showToast(`✅ 저장 완료! (신규: ${newCount}건, 수정: ${updateCount}건)`);
 }
 
 // === [신규] 데이터 엑셀 백업(내보내기) 및 복원(불러오기) ===
