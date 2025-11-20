@@ -1282,11 +1282,10 @@ function mergeAllRows() {
   });
 }
 
-// [수정] 99999 설정 (완료 알림을 토스트로 변경)
+// [수정] 99999 설정 (단종 유지 + 토스트 알림)
 function setAllStock99999() {
   if (!allRows.length) { alert('먼저 파일을 업로드하세요.'); return; }
   
-  // 확인 창은 실수 방지를 위해 유지합니다.
   const ok = confirm(
     '모든 파일의 재고를 99999로 설정합니다.\n' +
     '단, "단종"으로 설정된 항목은 유지되고 "품절" 상태만 해제됩니다.\n계속하시겠습니까?'
@@ -1294,17 +1293,16 @@ function setAllStock99999() {
   if (!ok) return;
 
   // 1. 데이터 재고 변경
-  for (const r of allRows) { 
-      r['재고수량'] = 99999; 
-  }
+  for (const r of allRows) { r['재고수량'] = 99999; }
   
   const fillBox = document.getElementById('fillStockCheckbox');
   if (fillBox) fillBox.checked = false; 
   
-  // 2. soldoutState 상태 정리 (단종 유지, 품절 해제)
+  // 2. soldoutState 상태 정리 (핵심: 단종은 남기고 품절만 삭제)
   const newSoldoutState = {};
 
   for (const code of uniqueCodes) {
+      // 이름 자체가 '단종'인 경우
       if (typeof code === 'string' && code.trim().startsWith('단종')) {
           newSoldoutState[code] = { 전체: "discont", 복합: [] };
           continue;
@@ -1313,11 +1311,13 @@ function setAllStock99999() {
       const oldState = soldoutState[code];
       if (!oldState) continue;
 
+      // 전체 단종인 경우 유지
       if (oldState.전체 === 'discont') {
           newSoldoutState[code] = oldState;
           continue;
       }
 
+      // 부분 옵션 중 '단종'인 것만 유지
       if (oldState.복합 && oldState.복합.length > 0) {
           const keptOptions = oldState.복합.filter(opt => opt.상태 === 'discont');
           if (keptOptions.length > 0) {
@@ -1336,7 +1336,6 @@ function setAllStock99999() {
     renderContextPanel(selectedCode);
   }
 
-  // [수정됨] 완료 알림을 토스트 메시지로 변경
   showToast('재고 99999 설정 완료 (단종은 유지됨)');
 }
 
@@ -2256,15 +2255,13 @@ async function downloadFiles() {
 
 const STORAGE_KEY = "easyHara_soldout_data_v1"; // 저장소 키 이름
 
-// [수정] 저장값 적용 (알림창 -> 토스트 메시지 변경)
+// [최종 완성] 저장값 적용 (단어 일치 + 긴 이름 우선 매칭으로 오작동 방지)
 function applyFromBrowser(isAuto = false) {
-  // 1. 파일 업로드 여부 확인
   if (uniqueCodes.length === 0) {
     if (!isAuto) alert("적용할 엑셀 파일이 없습니다.\n먼저 파일을 업로드해주세요.");
     return;
   }
 
-  // 2. 저장된 데이터 확인
   const savedJson = localStorage.getItem(STORAGE_KEY);
   if (!savedJson) {
     if (!isAuto) showToast("브라우저에 저장된 데이터가 없습니다.");
@@ -2274,29 +2271,56 @@ function applyFromBrowser(isAuto = false) {
   try {
     const savedState = JSON.parse(savedJson);
     let appliedCount = 0;
+    
+    // [중요] 저장된 키들을 '글자 길이'가 긴 순서대로 정렬
+    // 예: "K2 스카이폼 인솔"을 "K2"보다 먼저 검사하게 함 (오작동 방지)
+    const savedKeys = Object.keys(savedState).sort((a, b) => b.length - a.length);
 
-    // 3. 현재 파일의 코드와 저장된 데이터 매칭
-    uniqueCodes.forEach(code => {
-      if (savedState[code]) {
-        soldoutState[code] = savedState[code]; // 상태 적용
+    // [핵심] 문장을 '단어' 단위로 쪼개는 함수
+    const tokenize = (str) => {
+        // 대괄호, 소괄호, 슬래시는 공백으로 치환
+        let s = String(str || '').replace(/[[\]()/]/g, ' ');
+        s = s.replace(/[-_]/g, ''); // 하이픈, 언더바는 제거하여 코드 붙임
+        // 한글, 영문, 숫자만 남기고 나머지는 공백 기준 분리
+        return s.toLowerCase().split(/[^a-z0-9가-힣]+/).filter(t => t.length > 0);
+    };
+
+    uniqueCodes.forEach(fileCode => {
+      const fileTokens = tokenize(fileCode); 
+      
+      // 이미 처리된 코드는 건너뛰기 (선택 사항)
+      // if (soldoutState[fileCode]) return;
+
+      const matchedKey = savedKeys.find(savedKey => {
+          const savedTokens = tokenize(savedKey);
+          if (savedTokens.length === 0) return false;
+
+          // [양방향 단어 검사]
+          // 조건: 한쪽의 '모든 단어'가 다른 쪽에 다 들어있어야 함
+          // "프리미엄" 단어가 없는 쪽에 "프리미엄"이 들어간 상품이 매칭될 수 없음 -> 안전!
+          const savedInFile = savedTokens.every(t => fileTokens.includes(t));
+          const fileInSaved = fileTokens.every(t => savedTokens.includes(t));
+
+          return savedInFile || fileInSaved;
+      });
+
+      if (matchedKey) {
+        soldoutState[fileCode] = savedState[matchedKey];
         appliedCount++;
       }
     });
 
-    // 4. 화면 갱신
     updateCodeBtns();
     updateSoldoutList();
     if (selectedCode) renderContextPanel(selectedCode);
 
-    // 5. 결과 알림 (수정된 부분: alert -> showToast)
-    const msg = `로드 완료: ${appliedCount}개 코드가 적용되었습니다.`;
-    
+    const msg = `로드 완료: ${appliedCount}개 코드가 스마트 적용되었습니다.`;
     const statusEl = document.getElementById('saveStatusMsg');
     if (statusEl) statusEl.textContent = msg;
     
     if (!isAuto) {
         if (appliedCount === 0) {
-            showToast("저장된 데이터 중 일치하는 항목이 없습니다.");
+            showToast("일치하는 코드를 찾지 못했습니다.");
         } else {
             showToast(msg);
         }
@@ -2304,7 +2328,7 @@ function applyFromBrowser(isAuto = false) {
 
   } catch (e) {
     console.error("데이터 로드 실패", e);
-    if (!isAuto) showToast("데이터를 불러오는 중 오류가 발생했습니다.");
+    if (!isAuto) showToast("오류가 발생했습니다.");
   }
 }
 
@@ -2948,147 +2972,112 @@ function checkSizeMatch(rowSize, targetKey) {
   return false;
 }
 
-// [추가] 옵션 목록에서 중복 제거하여 유니크한 옵션만 추출하는 함수
+// [추가] 옵션 목록 중복 제거 유틸
 function getUniqueOptions(rows) {
   const map = new Map();
   rows.forEach(r => {
     const ex = extractColorAndSize(r);
-    // 키워드 생성 (색상|사이즈)
     const key = ex.color + '|' + ex.size;
     if (!map.has(key)) {
       map.set(key, { color: ex.color, size: ex.size });
     }
   });
-  // 정렬 후 반환 (색상순 -> 사이즈순)
   return Array.from(map.values()).sort((a, b) => 
     a.color.localeCompare(b.color) || compareSize(a.size, b.size)
   );
 }
 
-// [추가] 개별 옵션 변경 시 전체 상태 자동 계산 (에러 방지용 빈 함수)
-function checkAutoTotal(code) {
-  // 기능 비활성화 상태 (필요시 로직 추가 가능)
-}
+// [추가] 개별 옵션 변경 시 자동 계산 (에러 방지용 빈 함수)
+function checkAutoTotal(code) {}
 
-// [최종 수정] 사이즈 매칭 헬퍼 ("105(XL)" -> 105 또는 XL 매칭)
+// [최종 수정] 사이즈 매칭 헬퍼 ("105(XL)" 괄호 인식)
 function checkSizeMatch(rowSize, targetKey) {
-  // 1. 공백 제거 후 정확히 일치하면 통과
   const rS = String(rowSize).replace(/\s+/g, '').toUpperCase(); 
   const tK = String(targetKey).replace(/\s+/g, '').toUpperCase();
 
   if (rS === tK) return true;
   
-  // 2. "값(괄호)" 형태인지 분석
   const regex = /^([^(]+)\(([^)]+)\)$/;
   
-  // Case A: 엑셀 데이터(rS)가 "105(XL)" 형태
+  // 엑셀 데이터가 괄호 포함일 때
   let m = rS.match(regex);
   if (m) {
-      const main = m[1].trim().toUpperCase(); 
-      const sub = m[2].trim().toUpperCase();  
-      if (main === tK || sub === tK) return true;
+      if (m[1].trim().toUpperCase() === tK || m[2].trim().toUpperCase() === tK) return true;
   }
 
-  // Case B: 저장된 데이터(tK)가 "105(XL)" 형태
+  // 저장된 데이터가 괄호 포함일 때
   m = tK.match(regex);
   if (m) {
-      const main = m[1].trim().toUpperCase();
-      const sub = m[2].trim().toUpperCase(); 
-      if (main === rS || sub === rS) return true;
+      if (m[1].trim().toUpperCase() === rS || m[2].trim().toUpperCase() === rS) return true;
   }
   
   return false;
 }
 
-// 토스트 메시지 띄우기 함수
+// 토스트 메시지
 function showToast(message) {
   const toast = document.getElementById("toast");
   toast.className = "show";
   toast.innerText = message;
-  
-  setTimeout(function(){ 
-    toast.className = toast.className.replace("show", ""); 
-  }, 3000);
+  setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
 }
 
-// ==========================================
-//  [신규] GitHub API 연동 (클라우드 저장/불러오기)
-// ==========================================
-
-// 1. 설정 불러오기 (페이지 열릴 때 자동 실행) - [최종 수정]
+// GitHub 설정 로드
 document.addEventListener('DOMContentLoaded', () => {
-    // 고객님 요청: 경로는 하드코딩 (보안 문제 없음)
     const DEFAULT_REPO = 'EasyHara/stock_zero_tool';
     const DEFAULT_PATH = 'soldout_data.json';
 
-    // 1. 저장소와 파일 경로는 무조건 이 값으로 고정 (화면에는 안 보임)
-    const repoInput = document.getElementById('ghRepo');
-    const pathInput = document.getElementById('ghPath');
-    if(repoInput) repoInput.value = DEFAULT_REPO;
-    if(pathInput) pathInput.value = DEFAULT_PATH;
+    document.getElementById('ghRepo').value = DEFAULT_REPO;
+    document.getElementById('ghPath').value = DEFAULT_PATH;
 
-    // 2. 토큰은 브라우저에 저장된 값이 있을 때만 불러옴 (코드에는 없음!)
     const ghConfig = JSON.parse(localStorage.getItem('gh_config') || '{}');
     if(ghConfig.token) {
-        const tokenInput = document.getElementById('ghToken');
-        if(tokenInput) tokenInput.value = ghConfig.token;
+        document.getElementById('ghToken').value = ghConfig.token;
     }
 });
 
-// 2. 설정 저장
+// GitHub 설정 저장
 function saveGithubConfig() {
     const token = document.getElementById('ghToken').value.trim();
     const repo = document.getElementById('ghRepo').value.trim();
     const path = document.getElementById('ghPath').value.trim() || 'soldout_data.json';
     
-    if(!token || !repo) return alert('토큰과 저장소 이름(User/Repo)을 입력해주세요.');
-    
+    if(!token || !repo) return alert('정보를 입력해주세요.');
     localStorage.setItem('gh_config', JSON.stringify({ token, repo, path }));
-    showToast("✅ GitHub 설정이 저장되었습니다.");
+    showToast("✅ GitHub 설정 저장됨");
 }
 
-// [수정] 깃허브 업로드
+// GitHub 업로드
 async function uploadToGithub() {
     const token = document.getElementById('ghToken').value.trim();
     const repo = document.getElementById('ghRepo').value.trim();
     const path = document.getElementById('ghPath').value.trim();
     
-    if(!token || !repo) return alert('GitHub 설정을 먼저 저장해주세요.');
+    if(!token) return alert('토큰을 입력하고 저장해주세요.');
     
-    // 1. 업로드할 데이터 준비 (LocalStorage에 있는 모든 데이터 사용)
     let dataToUpload = {};
-    try {
-        dataToUpload = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-    } catch (e) {
-        dataToUpload = {};
-    }
+    try { dataToUpload = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) {}
 
-    // 데이터가 비어있으면 경고
     if (Object.keys(dataToUpload).length === 0) {
         if(!confirm('저장된 데이터가 없습니다. 빈 파일을 업로드하시겠습니까?')) return;
     } else {
-        if(!confirm(`저장소에 보관된 총 ${Object.keys(dataToUpload).length}건의 데이터를 GitHub에 업로드합니다.\n(기존 깃허브 파일은 덮어씌워집니다)`)) return;
+        if(!confirm(`총 ${Object.keys(dataToUpload).length}건의 데이터를 업로드합니다.`)) return;
     }
 
-    // 한글 깨짐 방지 인코딩
     const content = JSON.stringify(dataToUpload, null, 2);
     const contentBase64 = btoa(unescape(encodeURIComponent(content)));
-    
     const url = `https://api.github.com/repos/${repo}/contents/${path}`;
     
     try {
-        // 기존 파일 SHA 가져오기
         let sha = null;
         const getRes = await fetch(url, {
             headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
         });
-        
         if (getRes.ok) {
             const getData = await getRes.json();
             sha = getData.sha;
         }
 
-        // 파일 업로드 (PUT)
         const putRes = await fetch(url, {
             method: 'PUT',
             headers: {
@@ -3102,25 +3091,21 @@ async function uploadToGithub() {
             })
         });
 
-        if (putRes.ok) {
-            showToast(`✅ GitHub 업로드 성공! (총 ${Object.keys(dataToUpload).length}건)`);
-        } else {
+        if (putRes.ok) showToast(`✅ 업로드 성공! (${Object.keys(dataToUpload).length}건)`);
+        else {
             const err = await putRes.json();
-            alert(`업로드 실패: ${err.message}`);
+            alert(`실패: ${err.message}`);
         }
-    } catch (e) {
-        console.error(e);
-        alert('통신 중 오류가 발생했습니다.');
-    }
+    } catch (e) { console.error(e); alert('통신 오류'); }
 }
 
-// [수정] 깃허브 다운로드
+// GitHub 다운로드
 async function loadFromGithub() {
     const token = document.getElementById('ghToken').value.trim();
     const repo = document.getElementById('ghRepo').value.trim();
     const path = document.getElementById('ghPath').value.trim();
     
-    if(!token || !repo) return alert('GitHub 설정을 확인해주세요.');
+    if(!token) return alert('토큰을 입력하고 저장해주세요.');
     
     const url = `https://api.github.com/repos/${repo}/contents/${path}`;
     
@@ -3128,14 +3113,12 @@ async function loadFromGithub() {
         const res = await fetch(url, {
             headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
         });
-
         if (!res.ok) throw new Error('파일을 찾을 수 없거나 권한이 없습니다.');
         
         const data = await res.json();
         const decodedContent = decodeURIComponent(escape(atob(data.content)));
         const parsedData = JSON.parse(decodedContent);
         
-        // 1. 로컬 스토리지에 병합 저장
         let saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
         let newCount = 0;
         for(const key in parsedData) {
@@ -3144,18 +3127,11 @@ async function loadFromGithub() {
         }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
         
-        // 2. 목록 갱신
         refreshStorageList();
-        
-        // 3. 현재 열려있는 엑셀 파일에도 즉시 적용
-        applyFromBrowser(true); // true = 자동모드 (알림창 최소화)
+        applyFromBrowser(true); 
+        showToast(`✅ 동기화 완료! (${newCount}건)`);
 
-        showToast(`✅ GitHub 동기화 완료! (${newCount}건 받아옴)`);
-
-    } catch (e) {
-        console.error(e);
-        alert(`불러오기 실패: ${e.message}`);
-    }
+    } catch (e) { console.error(e); alert(`실패: ${e.message}`); }
 }
   </script>
 <div id="dataModal" class="modal-overlay">
