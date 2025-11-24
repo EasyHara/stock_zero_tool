@@ -799,38 +799,50 @@ function formatValidationSummary(report) {
 // === 유틸리티 함수 (기존 코드 유지) ===
 function toSafeId(str) { return String(str).replace(/[^a-zA-Z0-9\-_:.]/g, '_'); }
 
-// [최종 수정] 옵션 추출 (공백으로 된 '색상 사이즈' 자동 분리 기능 추가)
+// [최종 수정] 옵션 추출 (문법 오류 수정 + 공백 사이즈 자동 분리)
 function extractColorAndSize(row) {
-  // 1. 컬럼에 '색상', '사이즈'가 명확히 있으면 그거 씀
-  let color = String(row['색상'] || '').trim();
-  let size = String(row['사이즈'] || '').trim();
+  let color = '';
+  let size = '';
+  
+  const keys = Object.keys(row);
 
-  // 2. 없다면, 합쳐진 컬럼(옵션명 등)을 분석
+  // 1. 명확한 컬럼(색상, 사이즈, Color, Size, Option1...) 찾기
+  const colorKey = keys.find(k => {
+      const c = k.replace(/\s/g,'').toLowerCase();
+      return (/색상|color|opt1|옵션1/i.test(c)) && !/사이즈|size/i.test(c);
+  });
+  const sizeKey = keys.find(k => {
+      const c = k.replace(/\s/g,'').toLowerCase();
+      return /사이즈|size|opt2|옵션2/i.test(c);
+  });
+
+  if (colorKey) color = String(row[colorKey] || '').trim();
+  if (sizeKey) size = String(row[sizeKey] || '').trim();
+
+  // 2. 통합 컬럼 분석 (옵션명, 품목, 선택 등)
   if (!color && !size) {
-     // '옵션', '품목', '선택', '색상/사이즈' 등 가능한 컬럼을 다 뒤짐
-     const raw = String(row['옵션'] || row['옵션명'] || row['품목'] || row['선택'] || row['색상/사이즈'] || row['제품선택'] || row['추가상품값'] || '').trim();
+     const mixKey = keys.find(k => /옵션|품목|선택|제품선택|추가상품값|색상\/사이즈/i.test(k.replace(/\s/g,'')));
+     const mix = mixKey ? String(row[mixKey] || '').trim() : '';
      
-     if (raw) {
-         // [1단계] 기호(_, /)가 있는지 확인
-         const parts = raw.split(/[\/_]/); 
-         
+     if (mix) {
+         // [A] 기호(_, /)가 있으면 그걸로 나눔
+         const parts = mix.split(/[\/_]/);
          if (parts.length > 1) {
-             // 기호가 있으면: 뒤쪽=사이즈, 앞쪽=색상
-             size = parts.pop().trim(); 
+             size = parts.pop().trim();    
              color = parts.join(' ').trim();
          } else {
-             // [2단계] 기호가 없으면(공백 구분): 맨 뒤가 사이즈인지 확인 (예: "블랙 95")
-             // 정규식: 끝에 있는 "숫자(2~3자리)", "XS~XXL", "FREE" 등을 찾음
+             // [B] 기호가 없으면(공백 구분): 맨 뒤에 있는 "숫자"나 "영어 사이즈"를 찾음
+             // 예: "아이스티셔츠 블랙 95" -> "95" 발견!
              const sizeRegex = /([0-9]{2,3}|[XSML]+|FREE)\s*$/i;
-             const match = raw.match(sizeRegex);
-
+             const match = mix.match(sizeRegex);
+             
              if (match) {
-                 size = match[0].trim(); // 찾은 사이즈 (예: 95)
-                 // 전체 문구에서 사이즈 부분을 뺀 나머지를 색상으로 설정
-                 color = raw.substring(0, match.index).trim();
+                 size = match[0].trim(); // "95"
+                 // 전체 문구에서 사이즈를 뺀 앞부분을 색상으로
+                 color = mix.substring(0, match.index).trim(); // "아이스티셔츠 블랙"
              } else {
-                 // 사이즈 패턴도 없으면 통째로 사이즈로 취급 (단일 옵션)
-                 size = raw; 
+                 // 사이즈 패턴도 없으면 통째로 사이즈로 취급
+                 size = mix; 
              }
          }
      }
@@ -1186,34 +1198,31 @@ function readExcel(file) {
   });
 }
 
-// [수정] 데이터 병합 (엑셀 내 '단종' 접두어 자동 분리 및 상태 적용)
+// [복구] 데이터 병합 (번호 붙이기 기능 제거 -> 정석대로 중복 체크)
 function mergeAllRows() {
   allRows = []; 
   let codeSet = new Set(); 
   soldoutState = {};
-  
-  // [수정됨] 기존 els 변수 참조 오류 해결
-  // 99999 자동적용 체크 여부 확인 (HTML에 해당 ID가 없으므로 false로 고정하여 오류 방지)
   const isAuto99999 = false; 
 
   for (let { name, data } of fileDataArr) {
     data.forEach(row => {
       const keys = Object.keys(row);
-      const codeKey = keys.find(k => { const c = k.replace(/\s/g,''); return c==='관리코드'||c==='상품코드'||c==='코드'; });
+      // 관리코드, 상품코드, 코드 중 하나를 찾음
+      const codeKey = keys.find(k => ['관리코드','상품코드','코드'].includes(k.replace(/\s/g,'')));
       
-      let c = codeKey ? row[codeKey] : '';
+      let c = codeKey ? String(row[codeKey]).trim() : '';
       let isDiscExcel = false;
 
-      // [핵심] 엑셀 값에 "단종 "이 붙어있으면 분리
-      if (String(c).trim().startsWith('단종')) {
+      if (c.startsWith('단종')) {
           isDiscExcel = true;
-          c = String(c).trim().replace(/^단종\s*/, ''); // "단종 K2-90" -> "K2-90"
+          c = c.replace(/^단종\s*/, '');
       }
 
-      // 행 데이터 생성 (코드는 순수 코드로 저장)
+      // 행 데이터 생성
       let newRow = { ...row, file: name, 관리코드: c, _normCode: normCode(c) };
 
-      // 99999 자동 적용 (체크됐고, 단종이 아닐 때만)
+      // 99999 자동 적용
       if (isAuto99999 && !isDiscExcel) {
           newRow['재고수량'] = 99999;
       }
@@ -1222,7 +1231,6 @@ function mergeAllRows() {
       
       if (c) {
           codeSet.add(c);
-          // 엑셀에서 '단종'을 감지했다면 즉시 상태 등록
           if(isDiscExcel) {
               soldoutState[c] = { 전체: 'discont', 복합: [] };
           }
@@ -1231,6 +1239,36 @@ function mergeAllRows() {
   }
   
   uniqueCodes = Array.from(codeSet);
+
+  // (이하 재고 0 자동 품절 로직)
+  uniqueCodes.forEach(code => {
+    if (soldoutState[code]?.전체 === 'discont') return; 
+
+    const rows = rowsByCode(code); 
+    if (!rows.length) return;
+
+    let zeros = [];
+    rows.forEach(r => {
+      const stock = Number(r['재고수량']);
+      if (isNaN(stock) || stock <= 0) {
+        const { color, size } = extractColorAndSize(r);
+        zeros.push({ 색상: color, 사이즈: size, 상태: 'soldout' });
+      }
+    });
+
+    if (zeros.length === rows.length && rows.length > 0) {
+      soldoutState[code] = { 전체: 'soldout', 복합: [] };
+    } else if (zeros.length > 0) {
+      const uniq = []; const seen = new Set();
+      zeros.forEach(z => { 
+        // 중복 제거 (이제 색상/사이즈가 정확히 읽히므로 정상 작동함)
+        const k = z.색상 + '|' + z.사이즈; 
+        if (!seen.has(k)) { seen.add(k); uniq.push(z); }
+      });
+      soldoutState[code] = { 전체: false, 복합: uniq };
+    }
+  });
+}
 
   // (이하 재고 0 자동 품절 로직 - 이미 단종인 건 건너뜀)
   uniqueCodes.forEach(code => {
@@ -1259,7 +1297,6 @@ function mergeAllRows() {
       soldoutState[code] = { 전체: false, 복합: uniq };
     }
   });
-}
 
 // [수정] 99999 설정 (단종 유지 + 토스트 알림)
 function setAllStock99999() {
@@ -2234,7 +2271,7 @@ async function downloadFiles() {
 
 const STORAGE_KEY = "easyHara_soldout_data_v1"; // 저장소 키 이름
 
-// [최종 수정] 저장값 적용 (단어 단위 정밀 매칭 - 브랜드/유사코드 구분)
+// [수정됨] 저장값 적용 (정확히 일치하는 코드만 적용)
 function applyFromBrowser(isAuto = false) {
   if (uniqueCodes.length === 0) {
     if (!isAuto) alert("적용할 엑셀 파일이 없습니다.\n먼저 파일을 업로드해주세요.");
@@ -2250,41 +2287,16 @@ function applyFromBrowser(isAuto = false) {
   try {
     const savedState = JSON.parse(savedJson);
     let appliedCount = 0;
-    
-    // 저장된 키들을 미리 가져옴
-    const savedKeys = Object.keys(savedState);
 
-    // [핵심] 문장을 '단어(토큰)' 단위로 쪼개는 함수
-    // 예: "[K2] TS-2201 (공용)" -> ["k2", "ts2201", "공용"]
-    const tokenize = (str) => {
-        let s = String(str || '').replace(/[[\]()/]/g, ' '); // 괄호, 슬래시 제거
-        s = s.replace(/[-_]/g, ''); // 하이픈, 언더바 제거 (TS-2201 -> ts2201)
-        // 한글, 영문, 숫자만 남기고 나머지는 공백 기준 분리
-        return s.toLowerCase().split(/[^a-z0-9가-힣]+/).filter(t => t.length > 0);
-    };
-
+    // [변경 사항] 토큰 분리(tokenize) 로직 제거 -> 정확한 Key 매칭으로 변경
     uniqueCodes.forEach(fileCode => {
-      const fileTokens = tokenize(fileCode); 
-      
-      // 저장된 목록 중에서 매칭되는 것 찾기
-      const matchedKey = savedKeys.find(savedKey => {
-          const savedTokens = tokenize(savedKey);
-          if (savedTokens.length === 0) return false;
+      // 엑셀의 관리코드 (양옆 공백만 제거)
+      const cleanCode = String(fileCode).trim();
 
-          // [양방향 단어 검사]
-          // 조건 1: 저장된 단어들이 파일명 단어들에 '모두' 들어있는가? 
-          // (예: 저장="K2 자켓" -> 파일="K2 23FW 신상 자켓") => 성공
-          const savedInFile = savedTokens.every(t => fileTokens.includes(t));
-          
-          // 조건 2: 파일명 단어들이 저장된 단어들에 '모두' 들어있는가? 
-          // (예: 저장="K2 23FW 신상 자켓" -> 파일="K2 자켓") => 성공
-          const fileInSaved = fileTokens.every(t => savedTokens.includes(t));
-
-          return savedInFile || fileInSaved;
-      });
-
-      if (matchedKey) {
-        soldoutState[fileCode] = savedState[matchedKey];
+      // 저장된 데이터에 해당 코드가 정확히 있는지 확인
+      // (예: 저장된 코드가 "K2-001"이고 엑셀이 "K2-001"이어야만 통과)
+      if (savedState[cleanCode]) {
+        soldoutState[fileCode] = savedState[cleanCode];
         appliedCount++;
       }
     });
@@ -2293,7 +2305,7 @@ function applyFromBrowser(isAuto = false) {
     updateSoldoutList();
     if (selectedCode) renderContextPanel(selectedCode);
 
-    const msg = `로드 완료: ${appliedCount}개 코드가 스마트 적용되었습니다.`;
+    const msg = `로드 완료: ${appliedCount}개 코드가 적용되었습니다.`;
     const statusEl = document.getElementById('saveStatusMsg');
     if (statusEl) statusEl.textContent = msg;
     
@@ -2967,7 +2979,9 @@ function getUniqueOptions(rows) {
 }
 
 // [추가] 개별 옵션 변경 시 전체 상태 자동 계산 (에러 방지용 빈 함수)
-function checkAutoTotal(code) {}
+function checkAutoTotal(code) {
+  // 기능 비활성화 상태
+}
 
 // [최종 수정] 사이즈 매칭 헬퍼 ("105(XL)" 괄호 인식)
 function checkSizeMatch(rowSize, targetKey) {
@@ -2993,15 +3007,22 @@ function checkSizeMatch(rowSize, targetKey) {
   return false;
 }
 
-// 토스트 메시지
+// 토스트 메시지 띄우기 함수
 function showToast(message) {
   const toast = document.getElementById("toast");
   toast.className = "show";
   toast.innerText = message;
-  setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+  
+  setTimeout(function(){ 
+    toast.className = toast.className.replace("show", ""); 
+  }, 3000);
 }
 
-// GitHub 설정 로드
+// ==========================================
+//  [신규] GitHub API 연동 (클라우드 저장/불러오기)
+// ==========================================
+
+// 1. 설정 불러오기
 document.addEventListener('DOMContentLoaded', () => {
     const DEFAULT_REPO = 'EasyHara/stock_zero_tool';
     const DEFAULT_PATH = 'soldout_data.json';
@@ -3015,36 +3036,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// GitHub 설정 저장
+// 2. 설정 저장
 function saveGithubConfig() {
     const token = document.getElementById('ghToken').value.trim();
     const repo = document.getElementById('ghRepo').value.trim();
     const path = document.getElementById('ghPath').value.trim() || 'soldout_data.json';
     
-    if(!token || !repo) return alert('정보를 입력해주세요.');
+    if(!token || !repo) return alert('토큰과 저장소 이름(User/Repo)을 입력해주세요.');
+    
     localStorage.setItem('gh_config', JSON.stringify({ token, repo, path }));
-    showToast("✅ GitHub 설정 저장됨");
+    showToast("✅ GitHub 설정이 저장되었습니다.");
 }
 
-// GitHub 업로드
+// 3. 업로드
 async function uploadToGithub() {
     const token = document.getElementById('ghToken').value.trim();
     const repo = document.getElementById('ghRepo').value.trim();
     const path = document.getElementById('ghPath').value.trim();
     
-    if(!token) return alert('토큰을 입력하고 저장해주세요.');
+    if(!token || !repo) return alert('GitHub 설정을 먼저 저장해주세요.');
     
     let dataToUpload = {};
-    try { dataToUpload = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) {}
+    try {
+        dataToUpload = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch (e) {
+        dataToUpload = {};
+    }
 
     if (Object.keys(dataToUpload).length === 0) {
         if(!confirm('저장된 데이터가 없습니다. 빈 파일을 업로드하시겠습니까?')) return;
     } else {
-        if(!confirm(`총 ${Object.keys(dataToUpload).length}건의 데이터를 업로드합니다.`)) return;
+        if(!confirm(`저장소에 보관된 총 ${Object.keys(dataToUpload).length}건의 데이터를 업로드합니다.`)) return;
     }
 
     const content = JSON.stringify(dataToUpload, null, 2);
     const contentBase64 = btoa(unescape(encodeURIComponent(content)));
+    
     const url = `https://api.github.com/repos/${repo}/contents/${path}`;
     
     try {
@@ -3052,6 +3079,7 @@ async function uploadToGithub() {
         const getRes = await fetch(url, {
             headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
         });
+        
         if (getRes.ok) {
             const getData = await getRes.json();
             sha = getData.sha;
@@ -3070,21 +3098,25 @@ async function uploadToGithub() {
             })
         });
 
-        if (putRes.ok) showToast(`✅ 업로드 성공! (${Object.keys(dataToUpload).length}건)`);
-        else {
+        if (putRes.ok) {
+            showToast(`✅ GitHub 업로드 성공! (총 ${Object.keys(dataToUpload).length}건)`);
+        } else {
             const err = await putRes.json();
-            alert(`실패: ${err.message}`);
+            alert(`업로드 실패: ${err.message}`);
         }
-    } catch (e) { console.error(e); alert('통신 오류'); }
+    } catch (e) {
+        console.error(e);
+        alert('통신 중 오류가 발생했습니다.');
+    }
 }
 
-// GitHub 다운로드
+// 4. 다운로드
 async function loadFromGithub() {
     const token = document.getElementById('ghToken').value.trim();
     const repo = document.getElementById('ghRepo').value.trim();
     const path = document.getElementById('ghPath').value.trim();
     
-    if(!token) return alert('토큰을 입력하고 저장해주세요.');
+    if(!token || !repo) return alert('GitHub 설정을 확인해주세요.');
     
     const url = `https://api.github.com/repos/${repo}/contents/${path}`;
     
@@ -3092,6 +3124,7 @@ async function loadFromGithub() {
         const res = await fetch(url, {
             headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
         });
+
         if (!res.ok) throw new Error('파일을 찾을 수 없거나 권한이 없습니다.');
         
         const data = await res.json();
@@ -3108,9 +3141,13 @@ async function loadFromGithub() {
         
         refreshStorageList();
         applyFromBrowser(true); 
-        showToast(`✅ 동기화 완료! (${newCount}건)`);
 
-    } catch (e) { console.error(e); alert(`실패: ${e.message}`); }
+        showToast(`✅ GitHub 동기화 완료! (${newCount}건 받아옴)`);
+
+    } catch (e) {
+        console.error(e);
+        alert(`불러오기 실패: ${e.message}`);
+    }
 }
   </script>
 <div id="dataModal" class="modal-overlay">
