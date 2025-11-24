@@ -799,14 +799,14 @@ function formatValidationSummary(report) {
 // === 유틸리티 함수 (기존 코드 유지) ===
 function toSafeId(str) { return String(str).replace(/[^a-zA-Z0-9\-_:.]/g, '_'); }
 
-// [최종 수정] 옵션 추출 (제품명 / 색상 패턴 인식 기능 추가)
+// [최종 수정] 옵션 추출 (사이즈 컬럼이 있어도 색상이 없으면 제품명 분석)
 function extractColorAndSize(row) {
   let color = '';
   let size = '';
   
   const keys = Object.keys(row);
 
-  // 1. 명확한 컬럼(색상, 사이즈, Color, Size, Option1...) 찾기
+  // 1. 명확한 컬럼 찾기 (Size 컬럼은 있는데 Color 컬럼이 없는 경우 대비)
   const colorKey = keys.find(k => {
       const c = k.replace(/\s/g,'').toLowerCase();
       return (/색상|color|opt1|옵션1/i.test(c)) && !/사이즈|size/i.test(c);
@@ -819,51 +819,48 @@ function extractColorAndSize(row) {
   if (colorKey) color = String(row[colorKey] || '').trim();
   if (sizeKey) size = String(row[sizeKey] || '').trim();
 
-  // 2. 통합 컬럼 분석 (옵션명, 품목, 선택, 제품선택 등)
-  if (!color && !size) {
-      // '제품선택'이 포함되도록 키워드 매칭
+  // [수정] 색상이 비어있다면, 사이즈를 이미 찾았더라도 '제품선택'을 분석해서 색상을 채워넣어야 함
+  if (!color) {
       const mixKey = keys.find(k => /옵션|품목|선택|제품선택|추가상품값|색상\/사이즈/i.test(k.replace(/\s/g,'')));
       const mix = mixKey ? String(row[mixKey] || '').trim() : '';
       
       if (mix) {
-          // [A] 기호(_, /)가 있으면 그걸로 나눔
-          // 예: "04 K2 아이스 긴팔티셔츠 / 블랙" -> parts=["04 K2...", "블랙"]
+          // 기호(/ 또는 _)로 분리
           const parts = mix.split(/[\/_]/);
 
           if (parts.length > 1) {
-              const lastPart = parts.pop().trim();       // 뒤쪽 (예: 블랙 or 100)
-              const frontPart = parts.join(' ').trim();  // 앞쪽 (예: 상품명)
+              const lastPart = parts.pop().trim();       // 뒤쪽
+              const frontPart = parts.join(' ').trim();  // 앞쪽
 
-              // ★ [핵심 수정] 뒤에 있는 단어가 '사이즈'인지 확인
               if (isSizeToken(lastPart)) {
-                  // 뒤가 사이즈면 (예: 티셔츠 / 100)
-                  size = lastPart;
-                  color = frontPart; 
+                  // 뒤가 사이즈면 -> 이미 사이즈 컬럼에서 사이즈를 가져왔다면 덮어쓰지 않음(선택사항)
+                  // 여기서는 색상이 없어서 들어왔으므로 앞부분을 색상으로 사용
+                  color = frontPart;
+                  if (!size) size = lastPart; // 사이즈도 비어있었다면 채움
               } else {
-                  // 뒤가 사이즈가 아니면 '색상'으로 간주 (예: 티셔츠 / 블랙)
+                  // 뒤가 사이즈가 아니면(즉, 색상이면) -> 이걸 색상으로 사용
                   color = lastPart;
-                  // 사이즈는 비워둠 (필요하다면 frontPart에서 다시 찾을 수도 있으나, 보통 이 경우 사이즈 정보가 없는 것)
               }
-          } else {
-              // [B] 기호가 없으면(공백 구분): 맨 뒤에 있는 "숫자"나 "영어 사이즈"를 찾음
-              const sizeRegex = /([0-9]{2,3}|[XSML]+|FREE)\s*$/i;
-              const match = mix.match(sizeRegex);
-              
-              if (match) {
-                  size = match[0].trim(); // "95"
-                  color = mix.substring(0, match.index).trim(); // "아이스티셔츠 블랙"
-              } else {
-                  // 사이즈 패턴도 없으면 통째로 사이즈로 취급했었으나, 
-                  // 한글(색상)일 가능성이 높으므로 문맥상 색상으로 넣는게 안전할 수 있음.
-                  // 일단 기존 로직 유지하되, 만약 3글자 이상의 한글이라면 색상으로 뺌
-                  if (/[가-힣]{2,}/.test(mix) && !/[0-9]/.test(mix)) {
-                      color = mix;
-                  } else {
-                      size = mix; 
-                  }
-              }
+          } 
+          // 기호가 없는 경우 (공백 구분)
+          else if (!size) { // 사이즈조차 못 찾았을 때만 수행 (오작동 방지)
+               const sizeRegex = /([0-9]{2,3}|[XSML]+|FREE)\s*$/i;
+               const match = mix.match(sizeRegex);
+               if (match) {
+                   if (!size) size = match[0].trim();
+                   color = mix.substring(0, match.index).trim();
+               }
           }
       }
+  }
+  
+  // 사이즈 컬럼에 "95 / TS-1205" 처럼 코드가 섞여있는 경우 정제
+  if (size && size.includes('/')) {
+      const parts = size.split('/');
+      // "95 / 코드" 형태라면 앞부분이 사이즈일 확률 높음
+      // 단순히 앞부분을 사이즈로 취함 (isSizeToken 체크)
+      const p1 = parts[0].trim();
+      if(isSizeToken(p1)) size = p1;
   }
 
   return { color, size };
