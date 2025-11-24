@@ -869,10 +869,17 @@ function extractColorAndSize(row) {
   return { color, size };
 }
 
-// [수정] 사이즈 인식 범위 확대 (3XL, 4XL 등 포함)
+// [수정] 사이즈 인식 함수 (신발 사이즈, mm 단위 포함)
 function isSizeToken(v) {
-  // 3XL, 4XL, 5XL... 또는 숫자(95, 100) 등을 정규식으로 체크
-  return /^(FREE|XS|S|M|L|XL|XXL|\d{1}XL|\d{2,3})$/i.test(String(v||'').trim());
+  // 1. 값에서 공백 제거 및 대문자 변환
+  let s = String(v || '').trim().toUpperCase();
+  
+  // 2. 뒤에 'MM'이 붙어있으면 제거 (예: "230MM" -> "230")
+  s = s.replace(/MM$/, '');
+
+  // 3. 정규식 검사
+  // FREE, S~XXL, 3XL~, 또는 숫자 2~3자리 (10~999)
+  return /^(FREE|XS|S|M|L|XL|XXL|\d{1}XL|\d{2,3})$/i.test(s);
 }
 const SIZE_ORDER = ['FREE','XS','S','M','L','XL','XXL'];
 function sizeKey(v){
