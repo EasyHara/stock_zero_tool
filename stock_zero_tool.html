@@ -2364,12 +2364,63 @@ function applyFromBrowser(isAuto = false) {
   }
 }
 
-// 3. 저장된 데이터 삭제
+// [수정] 브라우저 데이터 삭제 (단종 내역은 유지하고 품절만 삭제)
 function clearBrowserData() {
-  if (!confirm("브라우저에 저장된 모든 품절/단종 기록을 삭제하시겠습니까?")) return;
-  localStorage.removeItem(STORAGE_KEY);
-  document.getElementById('saveStatusMsg').textContent = "🗑️ 저장된 데이터가 삭제되었습니다.";
-  alert("삭제되었습니다.");
+  // 데이터가 있는지 먼저 확인
+  const savedJson = localStorage.getItem(STORAGE_KEY);
+  if (!savedJson) {
+      alert("삭제할 데이터가 없습니다.");
+      return;
+  }
+
+  if (!confirm("⚠️ '단종' 내역은 유지하고, 나머지(품절 등) 데이터만 모두 삭제하시겠습니까?")) return;
+
+  let saved = {};
+  try { saved = JSON.parse(savedJson); } catch(e) {}
+
+  const newData = {};
+  let deletedCount = 0;
+  let keptCount = 0;
+
+  // 모든 저장된 코드를 순회하며 '단종' 여부 확인
+  for (const code in saved) {
+      const item = saved[code];
+      let shouldKeep = false;
+
+      // 1. [전체 단종]인 경우 -> 그대로 유지
+      if (item.전체 === 'discont') {
+          newData[code] = item;
+          shouldKeep = true;
+      }
+      // 2. [부분 옵션]이 있는 경우 -> '단종' 상태인 옵션만 남김
+      else if (item.복합 && item.복합.length > 0) {
+          // 상태가 'discont'인 옵션만 필터링
+          const onlyDiscontOpts = item.복합.filter(opt => opt.상태 === 'discont');
+          
+          if (onlyDiscontOpts.length > 0) {
+              // 단종 옵션만 남긴 채로 저장 (품절 옵션은 삭제됨)
+              item.복합 = onlyDiscontOpts;
+              newData[code] = item;
+              shouldKeep = true;
+          }
+      }
+
+      if (shouldKeep) keptCount++;
+      else deletedCount++;
+  }
+
+  // 필터링된 데이터(단종 내역들)로 덮어쓰기
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+  
+  // UI 갱신 (목록 다시 그리기)
+  refreshStorageList();
+  
+  // 입력창 초기화 (삭제된 데이터가 떠있을 수 있으므로)
+  initDynamicRows(); 
+
+  const msg = `🗑️ 정리 완료 (삭제: ${deletedCount}건, 유지: ${keptCount}건)`;
+  document.getElementById('saveStatusMsg').textContent = msg;
+  alert(`삭제가 완료되었습니다.\n\n- 삭제된 품절 내역: ${deletedCount}건\n- 유지된 단종 내역: ${keptCount}건`);
 }
 
 // [중요] 파일 처리 함수(handleFiles) 수정
