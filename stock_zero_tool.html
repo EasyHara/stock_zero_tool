@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리코드별 색상/사이즈 품절툴 (검색 및 일괄품절)</title>
+  <title>관리코드별 품절관리</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
@@ -916,6 +916,11 @@ function labelHasColorForCodeInFile(code, file){
   });
 }
 function buildLabelInsertColorAfterProductForCodeFile(code, file, tplRow, newColor){
+  // [수정] 원본 라벨에서 구분자 스타일 감지 (띄어쓰기 유무 확인)
+  const rawLabel = (tplRow['제품선택'] || tplRow['추가상품값'] || '').toString();
+  // ' / '가 포함되어 있으면 ' / '를 쓰고, 아니면 그냥 '/'를 사용
+  const separator = rawLabel.includes(' / ') ? ' / ' : '/';
+
   const tokens = labelToTokens(tplRow);
   const colorSetUpper = new Set(
     allRows
@@ -935,15 +940,26 @@ function buildLabelInsertColorAfterProductForCodeFile(code, file, tplRow, newCol
     const T = t.toUpperCase();
     return !colorSetUpper.has(T) && !isSizeToken(t);
   });
+  
   const out = [...filtered.slice(0,1), newColor, ...filtered.slice(1)];
-  return out.filter(Boolean).join(' / ');
+  
+  // [수정] 감지된 구분자로 합치기
+  return out.filter(Boolean).join(separator);
 }
 function replaceLastSizeTokenInLabel(labelStr, newSize){
+  // [수정] 원본 문자열에서 구분자 스타일 감지
+  const separator = labelStr.includes(' / ') ? ' / ' : '/';
+
   const tokens = labelStr.split('/').map(s => s.trim()).filter(Boolean);
   for (let i = tokens.length - 1; i >= 0; i--){
-    if (isSizeToken(tokens[i])) { tokens[i] = newSize; return tokens.join(' / '); }
+    if (isSizeToken(tokens[i])) { 
+        tokens[i] = newSize; 
+        // [수정] 감지된 구분자로 합치기
+        return tokens.join(separator); 
+    }
   }
-  return [newSize, ...tokens].join(' / ');
+  // [수정] 감지된 구분자로 합치기
+  return [newSize, ...tokens].join(separator);
 }
 function detectSizeDisplayPatternForCodeFile(code, file) {
   const rows = allRows.filter(r => r.file===file && r.관리코드===code);
@@ -1770,9 +1786,12 @@ function renderEditPanel(container, code) {
   }
 }
 
-// [수정] 2단: 편집 모드 - 옵션 목록 HTML 생성 (기존 로직 유지)
+// [수정] 2단: 편집 모드 - 옵션 목록 HTML 생성 (파일명 표시 강화)
 function renderOptionListHTML(code) {
-  const rowsForCode = rowsByCode(code);
+  // 화면 표시용이므로 여기서는 rowsByCode(느슨한 비교)를 써도 되지만, 
+  // 혼란 방지를 위해 여기서도 정확한 코드로 필터링하는 것이 좋습니다.
+  const rowsForCode = allRows.filter(r => r.관리코드 === code);
+  
   if (!rowsForCode.length) return `<div class="opt-empty">옵션이 없습니다.</div>`;
 
   const byFile = {};
@@ -1791,8 +1810,7 @@ function renderOptionListHTML(code) {
   Object.keys(byFile).sort().forEach(file => {
     html += `
       <div class="opt-file">
-        <div class="opt-file__title">${file}</div>
-      `;
+        <div class="opt-file__title">📂 파일: ${file}</div> `;
     const byColor = byFile[file];
     Object.keys(byColor).sort((a,b)=>a.localeCompare(b,'ko')).forEach(color => {
       const list = byColor[color].sort((a,b)=>compareSize(a.size, b.size));
@@ -1872,19 +1890,25 @@ function updateSoldoutList() {
   if (!any) soldoutListUl.innerHTML = `<li style="color:#b5b5b5; padding:10px; text-align:center;">(선택내역 없음)</li>`;
 }
 
-// === [수정] 핵심 로직 (옵션 추가, 삭제, 다운로드) ===
-
-// [수정] addNewOption: 팝업 대신 패널 내부 리스트 갱신
+// [최종 수정] addNewOption: 기존에 존재하는 색상일 경우 그 스타일을 그대로 복사 (공백/띄어쓰기 유지)
 function addNewOption(code) {
   const colorInput = document.getElementById(`newColor_${code}`).value.trim();
   const sizeInput  = document.getElementById(`newSize_${code}`)?.value.trim() || '';
   const stock      = parseInt(document.getElementById(`newStock_${code}`).value.trim(), 10) || 99999;
+  
   if (!colorInput && !sizeInput) { alert("색상 또는 사이즈 중 최소 하나는 입력하세요."); return; }
 
-  const listForCode = rowsByCode(code);
+  // 정확히 일치하는 코드만 필터링
+  const listForCode = allRows.filter(r => r.관리코드 === code); 
+  if (listForCode.length === 0) {
+      alert("해당 코드를 가진 원본 데이터를 찾을 수 없습니다.");
+      return;
+  }
+  
   const filesForCode = Array.from(new Set(listForCode.map(r => r.file)));
 
   filesForCode.forEach(fileName => {
+    // 템플릿용 행 찾기 (해당 파일의 첫 번째 행 등)
     const template = listForCode.find(r => r.file === fileName);
     if (!template) return;
 
@@ -1895,6 +1919,7 @@ function addNewOption(code) {
       return tokens.some(isSizeToken);
     })();
 
+    // 1. 사용할 색상 목록 결정
     const colorsToUse = colorInput
       ? [colorInput]
       : (Array.from(new Set(
@@ -1904,6 +1929,7 @@ function addNewOption(code) {
             .filter(Boolean)
         )) || ['']);
 
+    // 2. 사용할 사이즈 목록 결정
     let sizesToUse;
     if (sizeInput) sizesToUse = [sizeInput];
     else {
@@ -1913,12 +1939,42 @@ function addNewOption(code) {
     }
     sizesToUse = [...sizesToUse].sort(compareSize);
 
+    // 3. 옵션 추가/갱신 루프
     colorsToUse.forEach(col => {
       sizesToUse.forEach(sz => {
-        let labelValue = (template['제품선택'] || template['추가상품값'] || '').toString();
-        if (useColorInLabel && col) labelValue = buildLabelInsertColorAfterProductForCodeFile(code, fileName, template, col);
-        if (useSizeInLabel && sz)  labelValue = replaceLastSizeTokenInLabel(labelValue, sz);
+        let labelValue = '';
 
+        // [핵심 수정] 해당 색상이 이미 존재하는지 확인 ("라이트그레이" 행이 있는지 찾음)
+        const siblingRow = allRows.find(r => 
+            r.file === fileName && 
+            r.관리코드 === code && 
+            (String(r['색상']||'').trim() === col || extractColorAndSize(r).color === col)
+        );
+
+        if (siblingRow) {
+            // Case A: 이미 존재하는 색상임 (예: 라이트그레이 95가 이미 있음)
+            // -> 기존 행의 제품명을 그대로 복사 (띄어쓰기 없는 포맷 유지)
+            labelValue = (siblingRow['제품선택'] || siblingRow['추가상품값'] || '').toString();
+
+            // 만약 라벨 안에 사이즈가 포함되어 있다면(예: .../라이트그레이/95), 사이즈 부분만 교체
+            if (useSizeInLabel && sz) {
+                 labelValue = replaceLastSizeTokenInLabel(labelValue, sz);
+            }
+        } else {
+            // Case B: 아예 새로운 색상 추가 (예: 블루)
+            // -> 템플릿(블랙 등)을 참고해서 새로 조합
+            labelValue = (template['제품선택'] || template['추가상품값'] || '').toString();
+            
+            if (useColorInLabel && col) {
+                // 구분자 감지 후 삽입
+                labelValue = buildLabelInsertColorAfterProductForCodeFile(code, fileName, template, col);
+            }
+            if (useSizeInLabel && sz) {
+                labelValue = replaceLastSizeTokenInLabel(labelValue, sz);
+            }
+        }
+
+        // 중복 확인
         const existIdx = allRows.findIndex(r => {
           if (r.file !== fileName || r.관리코드 !== code) return false;
           if (!rowHasColorWithPattern(r, col, pattern)) return false;
@@ -1927,6 +1983,7 @@ function addNewOption(code) {
         });
 
         if (existIdx >= 0) {
+          // 갱신 로직
           const row = allRows[existIdx];
           row['재고수량'] = stock;
           if (pattern.column === '사이즈') {
@@ -1938,10 +1995,11 @@ function addNewOption(code) {
           if ('제품선택'    in row) row['제품선택']    = labelValue;
           if ('추가상품값' in row) row['추가상품값'] = labelValue;
         } else {
-          const newRow = { ...template };
+          // 추가 로직
+          const newRow = { ...template }; // 템플릿 복사
           newRow['관리코드'] = code;
           if ('상품코드' in newRow) newRow['상품코드'] = code;
-          if ('코드'      in newRow) newRow['코드']      = code;
+          if ('코드'      in newRow) newRow['코드']       = code;
           newRow._normCode = normCode(code);
           newRow['재고수량'] = stock;
           newRow.file = fileName;
@@ -1952,9 +2010,12 @@ function addNewOption(code) {
           } else if (pattern.column === '색상') {
             if ('색상' in newRow) newRow['색상'] = pattern.format(sz);
           }
+          
+          // [중요] 위에서 결정한 labelValue (공백 없는 버전) 적용
           if ('제품선택'    in newRow) newRow['제품선택']    = labelValue;
           if ('추가상품값' in newRow) newRow['추가상품값'] = labelValue;
 
+          // 삽입 위치 찾기
           const lastSameColorIdx = findLastIndex(allRows, r => {
             if (r.file !== fileName || r.관리코드 !== code) return false;
             return rowHasColorWithPattern(r, col, pattern);
