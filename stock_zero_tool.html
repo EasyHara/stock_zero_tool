@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리코드별 품절관리</title>
+  <title>관리코드별 색상/사이즈 품절툴 (검색 및 일괄품절)</title>
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
@@ -1200,10 +1200,11 @@ async function handleFiles(filelist) {
   fileCountElem.textContent = fileList.length > 1 ? `+${fileList.length}개` : '';
   downloadBtn.disabled = false;
 
-  // 1. 자동 적용 옵션이 켜져있으면 실행
-  const autoCheck = document.getElementById('autoApplyCheck');
-  if (autoCheck && autoCheck.checked) {
-    applyFromBrowser(true);
+  // [수정됨] 라디오 버튼 설정에 따라 자동 적용
+  const applyMode = document.querySelector('input[name="autoApplyType"]:checked')?.value || 'none';
+  if (applyMode !== 'none') {
+    // 'all' 또는 'discont_only' 모드로 실행
+    applyFromBrowser(true, applyMode);
   }
 
   // 2. [신규] 관리코드 누락 안내 알림
@@ -2373,8 +2374,8 @@ async function downloadFiles() {
 
 const STORAGE_KEY = "easyHara_soldout_data_v1"; // 저장소 키 이름
 
-// [수정됨] 저장값 적용 (정확히 일치하는 코드만 적용)
-function applyFromBrowser(isAuto = false) {
+// [수정됨] 저장값 적용 (모드에 따른 필터링 추가)
+function applyFromBrowser(isAuto = false, mode = 'all') {
   if (uniqueCodes.length === 0) {
     if (!isAuto) alert("적용할 엑셀 파일이 없습니다.\n먼저 파일을 업로드해주세요.");
     return;
@@ -2387,18 +2388,47 @@ function applyFromBrowser(isAuto = false) {
   }
 
   try {
-    const savedState = JSON.parse(savedJson);
+    const savedStateRaw = JSON.parse(savedJson);
     let appliedCount = 0;
 
-    // [변경 사항] 토큰 분리(tokenize) 로직 제거 -> 정확한 Key 매칭으로 변경
     uniqueCodes.forEach(fileCode => {
-      // 엑셀의 관리코드 (양옆 공백만 제거)
       const cleanCode = String(fileCode).trim();
+      const rawItem = savedStateRaw[cleanCode];
 
-      // 저장된 데이터에 해당 코드가 정확히 있는지 확인
-      // (예: 저장된 코드가 "K2-001"이고 엑셀이 "K2-001"이어야만 통과)
-      if (savedState[cleanCode]) {
-        soldoutState[fileCode] = savedState[cleanCode];
+      if (!rawItem) return;
+
+      // === [핵심] 모드에 따른 필터링 로직 ===
+      let itemToApply = null;
+
+      if (mode === 'all') {
+        // 1. 전체 적용: 있는 그대로 복사
+        itemToApply = JSON.parse(JSON.stringify(rawItem));
+      } 
+      else if (mode === 'discont_only') {
+        // 2. 단종만 적용: 품절 상태는 제거하고 단종만 남김
+        
+        // (1) 전체 품절인 경우 -> 적용 안 함
+        if (rawItem.전체 === 'soldout') {
+          return; 
+        }
+        
+        // (2) 전체 단종인 경우 -> 적용함
+        if (rawItem.전체 === 'discont') {
+          itemToApply = { 전체: 'discont', 복합: [] };
+        }
+        // (3) 부분 설정인 경우 -> 'discont' 상태인 옵션만 필터링
+        else if (rawItem.복합 && rawItem.복합.length > 0) {
+          const onlyDiscontOpts = rawItem.복합.filter(opt => opt.상태 === 'discont');
+          
+          if (onlyDiscontOpts.length > 0) {
+            itemToApply = { 전체: false, 복합: onlyDiscontOpts };
+          }
+        }
+      }
+
+      // 필터링 결과 적용할 내용이 있다면 상태 업데이트
+      if (itemToApply) {
+        soldoutState[fileCode] = itemToApply;
         appliedCount++;
       }
     });
@@ -2407,16 +2437,16 @@ function applyFromBrowser(isAuto = false) {
     updateSoldoutList();
     if (selectedCode) renderContextPanel(selectedCode);
 
-    const msg = `로드 완료: ${appliedCount}개 코드가 적용되었습니다.`;
+    // 메시지 처리
+    let typeMsg = mode === 'discont_only' ? '(단종만)' : '(전체)';
+    const msg = `로드 완료${typeMsg}: ${appliedCount}개 코드가 적용되었습니다.`;
+    
     const statusEl = document.getElementById('saveStatusMsg');
     if (statusEl) statusEl.textContent = msg;
     
     if (!isAuto) {
-        if (appliedCount === 0) {
-            showToast("일치하는 코드를 찾지 못했습니다.");
-        } else {
-            showToast(msg);
-        }
+       if (appliedCount === 0) showToast("적용할 데이터가 없거나 일치하지 않습니다.");
+       else showToast(msg);
     }
 
   } catch (e) {
@@ -2484,30 +2514,213 @@ function clearBrowserData() {
   alert(`삭제가 완료되었습니다.\n\n- 삭제된 품절 내역: ${deletedCount}건\n- 유지된 단종 내역: ${keptCount}건`);
 }
 
-// [중요] 파일 처리 함수(handleFiles) 수정
-// 기존 handleFiles 함수 끝부분에 자동 적용 로직을 연결해야 합니다.
-// 아래 코드를 기존 handleFiles 함수 마지막 부분(downloadBtn.disabled = false; 다음 줄)에 덮어쓰거나 추가하세요.
+// ==========================================
+//  [통합 수정] 모달 및 동적 입력창 관리 로직
+// ==========================================
 
-/*
-  (기존 handleFiles 함수 내부...)
-  ...
-  fileCountElem.textContent = fileList.length > 1 ? `+${fileList.length}개` : '';
-  downloadBtn.disabled = false;
-  
-  // --- [추가된 부분] ---
-  const autoCheck = document.getElementById('autoApplyCheck');
-  if (autoCheck && autoCheck.checked) {
-    applyFromBrowser(true); // 자동으로 저장된 내역 적용
-  }
-  // -------------------
-*/
-// === [업데이트] 모달 관련 로직 ===
-
+// 1. 모달 열기 (중복 정의 제거 및 통합)
 function openModal() {
-  document.getElementById('dataModal').style.display = 'flex';
-  document.getElementById('saveStatusMsg').textContent = '';
-  refreshStorageList();
+  const modal = document.getElementById('dataModal');
+  if (modal) {
+    modal.style.display = 'flex';
+  }
+
+  // 상태 메시지 초기화
+  const msgEl = document.getElementById('saveStatusMsg');
+  if (msgEl) msgEl.textContent = '';
+
+  // 저장된 목록 갱신
+  if (typeof refreshStorageList === 'function') {
+    refreshStorageList();
+  }
+
+  // ★ 중요: 입력창 강제 초기화 (기존 입력창 비우고 새 줄 생성)
   initDynamicRows();
+}
+
+// 2. 모달 닫기
+function closeModal() {
+  const modal = document.getElementById('dataModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// 3. 입력창 영역 초기화 (한 줄 생성)
+function initDynamicRows() {
+  const container = document.getElementById('rowContainer');
+  if (!container) return;
+  
+  container.innerHTML = ''; // 기존 내용 모두 비움
+  addDynamicRow(true);      // 첫 번째 빈 줄 생성
+}
+
+// 4. 동적 행 추가 함수 (스마트 붙여넣기 기능 포함)
+function addDynamicRow(isFirst = false) {
+  const container = document.getElementById('rowContainer');
+  if (!container) return;
+
+  const div = document.createElement('div');
+  div.className = 'dynamic-row';
+  div.innerHTML = `
+    <input type="text" class="d-input d-code" placeholder="코드 (예: P-001)">
+    <input type="text" class="d-input d-opt" placeholder="옵션 (예: 블랙-95, 단종 네이비-100)">
+    <button class="d-disc-btn" onclick="toggleDisc(this)">단종</button>
+    <div class="d-del-btn ${isFirst ? 'disabled' : ''}" onclick="removeRow(this)">&times;</div>
+  `;
+  
+  // [이벤트 연결]
+  const codeInput = div.querySelector('.d-code');
+  const optInput = div.querySelector('.d-opt');
+
+  // 1) 붙여넣기 감지 (엑셀 붙여넣기 시 스마트 처리)
+  codeInput.addEventListener('paste', function(e) { 
+      handleSmartPaste(e, div); 
+  });
+
+  // 2) 입력 감지 (마지막 줄 입력 시 자동 추가)
+  codeInput.addEventListener('input', function() {
+      checkAndAddRow(this);
+      // 입력된 값으로 저장된 목록 실시간 필터링 (선택사항)
+      if (typeof refreshStorageList === 'function') {
+          refreshStorageList(this.value); 
+      }
+  });
+  optInput.addEventListener('input', function() {
+      checkAndAddRow(this);
+  });
+
+  // 3) 엔터키 저장
+  [codeInput, optInput].forEach(inp => {
+    inp.addEventListener('keydown', function(e) { 
+        if(e.key === 'Enter') saveDynamicRows(); 
+    });
+  });
+
+  container.appendChild(div);
+  
+  // 스크롤을 맨 아래로
+  container.scrollTop = container.scrollHeight;
+}
+
+// 5. 스마트 붙여넣기 처리 (엑셀 데이터 인식)
+function handleSmartPaste(e, currentRow) {
+  const clipboardData = (e.clipboardData || window.clipboardData);
+  const text = clipboardData.getData('text');
+  
+  // 여러 줄이나 탭이 포함된 경우에만 작동
+  if (!text.includes('\n') && !text.includes('\t')) return;
+  
+  e.preventDefault(); // 기본 붙여넣기 방지
+  
+  const rows = text.trim().split(/[\n\r]+/);
+  const container = document.getElementById('rowContainer');
+  
+  rows.forEach((rowStr, i) => {
+    const cols = rowStr.split('\t');
+    let code = cols[0] ? cols[0].trim() : ''; 
+    let opt = cols[1] ? cols[1].trim() : '';  
+    
+    if (!code) return;
+
+    let isDisc = false;
+    // "단종 CODE" 형태 처리
+    if (code.startsWith('단종')) {
+        isDisc = true;
+        code = code.replace(/^단종\s*/, '').trim(); 
+        opt = ''; 
+    }
+
+    let targetRow;
+    if (i === 0) {
+      // 첫 번째 줄은 현재 커서가 있는 행에 입력
+      targetRow = currentRow;
+    } else { 
+      // 그 다음 줄부터는 새 행 추가
+      addDynamicRow(); 
+      targetRow = container.lastElementChild; 
+    }
+    
+    fillRowData(targetRow, code, opt, isDisc);
+  });
+
+  // 다 붙여넣고 나서 빈 줄 하나 더 추가 (편의성)
+  addDynamicRow();
+}
+
+// 6. 행 데이터 채우기 (붙여넣기 헬퍼)
+function fillRowData(rowElement, code, optionRaw, isDiscForce = false) {
+  const codeInput = rowElement.querySelector('.d-code');
+  const optInput = rowElement.querySelector('.d-opt');
+  const discBtn = rowElement.querySelector('.d-disc-btn');
+
+  codeInput.value = code;
+  const cleanOpt = optionRaw.replace(/\s+/g, '');
+
+  // 단종 버튼 및 옵션칸 상태 설정
+  if (isDiscForce || cleanOpt === '단종') {
+      if (!discBtn.classList.contains('active')) toggleDisc(discBtn);
+  } 
+  else if (['품절', '전체', '전체품절', '전량', '전량품절'].includes(cleanOpt)) {
+      if (discBtn.classList.contains('active')) toggleDisc(discBtn); // 단종 해제
+      optInput.value = ''; // 내용은 비움
+  } 
+  else {
+      if (discBtn.classList.contains('active')) toggleDisc(discBtn);
+      optInput.value = optionRaw;
+  }
+}
+
+// 7. 자동 행 추가 감지
+function checkAndAddRow(inputElement) {
+  const row = inputElement.closest('.dynamic-row');
+  const container = document.getElementById('rowContainer');
+  
+  // 현재 입력 중인 행이 마지막 행이고, 내용이 있으면 새 줄 추가
+  if (row === container.lastElementChild && inputElement.value.trim() !== '') {
+    addDynamicRow();
+  }
+}
+
+// 8. 단종 버튼 토글
+function toggleDisc(btn) {
+  btn.classList.toggle('active');
+  const row = btn.closest('.dynamic-row');
+  const optInput = row.querySelector('.d-opt');
+  
+  if (btn.classList.contains('active')) {
+    optInput.disabled = true;
+    optInput.placeholder = "(전체 단종 설정됨)";
+    optInput.style.backgroundColor = "#f3f4f6";
+    optInput.value = ''; // 단종 시 옵션 내용은 의미 없으므로 비움
+  } else {
+    optInput.disabled = false;
+    optInput.placeholder = "옵션 (예: 블랙-95)";
+    optInput.style.backgroundColor = "#fff";
+  }
+}
+
+// 9. 행 삭제 버튼
+function removeRow(btn) {
+  const row = btn.closest('.dynamic-row');
+  // 행이 하나밖에 없으면 삭제 안함 (혹은 내용을 비움)
+  const container = document.getElementById('rowContainer');
+  if (container.children.length <= 1) {
+      row.querySelector('.d-code').value = '';
+      row.querySelector('.d-opt').value = '';
+      const discBtn = row.querySelector('.d-disc-btn');
+      if(discBtn.classList.contains('active')) toggleDisc(discBtn);
+      return;
+  }
+  row.remove();
+}
+
+// 10. 모달 외부 클릭 시 닫기
+window.onclick = function(event) {
+  const modal = document.getElementById('dataModal');
+  if (event.target == modal) {
+    closeModal();
+  }
 }
 
 // [수정] 목록 그리기 (검색 필터 기능 추가)
@@ -2656,16 +2869,18 @@ function loadItemForEdit(code) {
 
 // === [수정] 스마트 붙여넣기 로직 (직접 입력창에 붙여넣기) ===
 
-// 1. 초기화
+// [긴급 복구] 입력창 생성 함수 재정의
 function initDynamicRows() {
   const container = document.getElementById('rowContainer');
+  if (!container) return; // 컨테이너가 없으면 종료
   container.innerHTML = '';
   addDynamicRow(true); // 기본 1줄 생성
 }
 
-// [수정] 줄 추가 함수 (입력 시 실시간 검색 기능 추가됨)
 function addDynamicRow(isFirst = false) {
   const container = document.getElementById('rowContainer');
+  if (!container) return;
+
   const div = document.createElement('div');
   div.className = 'dynamic-row';
   div.innerHTML = `
@@ -2675,33 +2890,49 @@ function addDynamicRow(isFirst = false) {
     <div class="d-del-btn ${isFirst ? 'disabled' : ''}" onclick="removeRow(this)">&times;</div>
   `;
   
-  // 1. 관리코드 입력창 가져오기
+  // 이벤트 연결
   const codeInput = div.querySelector('.d-code');
-
-  // [이벤트 1] 붙여넣기 감지 (스마트 붙여넣기)
+  
+  // 1. 붙여넣기 감지
   codeInput.addEventListener('paste', function(e) { 
       handleSmartPaste(e, div); 
   });
 
-  // [이벤트 2] 입력 감지 (★ 여기가 수정됨: 자동 줄 추가 + 실시간 검색)
+  // 2. 입력 감지 (줄 추가 + 목록 검색)
   codeInput.addEventListener('input', function() {
-      checkAndAddRow(this);           // 줄 추가 확인
-      refreshStorageList(this.value); // ★ 입력된 값으로 아래 목록 검색
+      checkAndAddRow(this);            
+      if (typeof refreshStorageList === 'function') {
+          refreshStorageList(this.value); 
+      }
   });
 
-  // 2. 나머지 입력창 이벤트 (옵션창 등)
   const inputs = div.querySelectorAll('input');
   inputs.forEach(inp => {
-    // 관리코드가 아닌 다른 입력창은 줄 추가 기능만 수행
     if (!inp.classList.contains('d-code')) {
         inp.addEventListener('input', function() { checkAndAddRow(this); });
     }
-    // 엔터키 저장 기능
     inp.addEventListener('keydown', function(e) { if(e.key === 'Enter') saveDynamicRows(); });
   });
 
   container.appendChild(div);
   container.scrollTop = container.scrollHeight;
+}
+
+// 모달 열 때 강제로 입력창 초기화 실행
+const originalOpenModal = window.openModal;
+window.openModal = function() {
+    const modal = document.getElementById('dataModal');
+    if(modal) modal.style.display = 'flex';
+    
+    // ▼▼▼ [수정됨: 요소가 있을 때만 텍스트를 비우도록 안전장치 추가] ▼▼▼
+    const msgEl = document.getElementById('saveStatusMsg');
+    if(msgEl) msgEl.textContent = ''; 
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+    
+    if(typeof refreshStorageList === 'function') refreshStorageList();
+    
+    // 입력창 강제 생성 (이제 에러 없이 실행됩니다)
+    setTimeout(initDynamicRows, 50); 
 }
 
 // [수정] 스마트 붙여넣기 (관리코드 열의 '단종' 접두어 자동 인식 추가)
@@ -3189,6 +3420,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+// [신규] 자동 적용 설정 저장/로드 리스너
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. 저장된 설정 불러오기
+    const savedMode = localStorage.getItem('autoApplyType') || 'all';
+    const radios = document.getElementsByName('autoApplyType');
+    radios.forEach(r => {
+        if (r.value === savedMode) r.checked = true;
+        // 2. 변경 시 저장하기
+        r.addEventListener('change', (e) => {
+            localStorage.setItem('autoApplyType', e.target.value);
+        });
+    });
+});
+
+
+
 // 2. 설정 저장
 function saveGithubConfig() {
     const token = document.getElementById('ghToken').value.trim();
@@ -3311,49 +3558,64 @@ async function loadFromGithub() {
       </div>
 
       <div class="manual-add-area">
-        <div style="font-size:13px; font-weight:700; color:#2c6e58; margin-bottom:6px; display:flex; justify-content:space-between;">
-          <span>⚡ 관리코드 및 옵션 등록</span>
-          <span style="font-size:11px; color:#888; font-weight:400;">(코드 칸에 엑셀 내용을 붙여넣으세요)</span>
-        </div>
-        
-        <div style="display:flex; gap:6px; padding:0 6px; margin-bottom:4px; font-size:12px; color:#555; font-weight:600;">
-          <div style="flex:1;">관리코드</div>
-          <div style="flex:1.8;">품절옵션 (예: 블랙-95, 단종-100)</div>
-          <div style="width:50px; text-align:center;">상태</div>
-          <div style="width:20px;"></div>
-        </div>
+  <div style="font-size:13px; font-weight:700; color:#2c6e58; margin-bottom:6px; display:flex; justify-content:space-between;">
+    <span>⚡ 관리코드 및 옵션 등록</span>
+    <span style="font-size:11px; color:#888; font-weight:400;">(코드 칸에 엑셀 내용을 붙여넣으세요)</span>
+  </div>
+  
+  <div style="display:flex; gap:6px; padding:0 6px; margin-bottom:4px; font-size:12px; color:#555; font-weight:600;">
+    <div style="flex:1;">관리코드</div>
+    <div style="flex:1.8;">품절옵션 (예: 블랙-95, 단종-100)</div>
+    <div style="width:50px; text-align:center;">상태</div>
+    <div style="width:20px;"></div>
+  </div>
 
-        <div id="rowContainer" class="manual-scroll-box"></div>
-
-        <div style="text-align:right; margin-top:10px;">
-           <button class="manual-btn" onclick="saveDynamicRows()">리스트에 추가(저장)</button>
-        </div>
-      </div>
+  <div id="rowContainer" class="manual-scroll-box"></div>
+  <div style="text-align:right; margin-top:10px;">
+     <button class="manual-btn" onclick="saveDynamicRows()">리스트에 추가(저장)</button>
+  </div>
+</div>
       
       <div class="storage-ctrl-bar">
-        <div>
-          <span style="font-size:13px; font-weight:600; color:#444;">저장된 목록</span>
-          <span id="storageCount" style="font-size:12px; color:#888;">0개</span>
-        </div>
-        <button class="del-sel-btn" onclick="deleteSelectedItems()">선택 삭제</button>
-      </div>
+  <div>
+    <span style="font-size:13px; font-weight:600; color:#444;">저장된 목록</span>
+    <span id="storageCount" style="font-size:12px; color:#888;">0개</span>
+    
+    <span id="saveStatusMsg" style="font-size:12px; color:#2b7365; margin-left:8px; font-weight:600;"></span>
+    </div>
+  <button class="del-sel-btn" onclick="deleteSelectedItems()">선택 삭제</button>
+</div>
       
       <div class="storage-list-area" id="storageListContainer">
         <div style="padding:20px; text-align:center; color:#aaa; font-size:13px;">저장된 데이터가 없습니다.</div>
       </div>
 
-      <div class="modal-row">
-         <label style="font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
-          <input type="checkbox" id="autoApplyCheck" checked> 파일 열 때 이 데이터 자동 적용
-        </label>
-      </div>
-      <div id="saveStatusMsg" style="font-size:12px; color:#2c6e58; margin-bottom:8px; height:16px;"></div>
-      
-      <div style="display:flex; gap:8px; margin-bottom:12px;">
-        <button class="switch-btn" style="flex:1; margin:0;" onclick="saveToBrowser()">동기화저장</button>
-        <button class="switch-btn" style="flex:1; margin:0; background:#fff;" onclick="applyFromBrowser()">현재 파일에 적용</button>
-      </div>
-
+      <div class="modal-row" style="background: #f7faf9; padding: 10px; border-radius: 8px; border: 1px solid #e1ece6;">
+  <div style="font-size: 13px; font-weight: 700; color: #2c6e58; margin-bottom: 8px;">
+    📂 파일 열 때 저장 데이터 자동 적용
+  </div>
+  <div style="display: flex; gap: 15px; font-size: 13px; color: #444;">
+    <label style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
+      <input type="radio" name="autoApplyType" value="all" checked>
+      전체 적용 (품절+단종)
+    </label>
+    <label style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
+      <input type="radio" name="autoApplyType" value="discont_only">
+      <span style="color:#6d28d9; font-weight:600;">단종만</span> 적용
+    </label>
+    <label style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
+      <input type="radio" name="autoApplyType" value="none">
+      적용 안 함
+    </label>
+  </div>
+</div>
+<div style="display:flex; gap:8px; margin-bottom:12px;">
+  <button class="switch-btn" style="flex:1; margin:0;" onclick="saveToBrowser()">동기화저장</button>
+  <button class="switch-btn" style="flex:1; margin:0; background:#fff;" 
+          onclick="applyFromBrowser(false, document.querySelector('input[name=autoApplyType]:checked').value)">
+    현재 설정대로 적용
+  </button>
+</div>
 <div style="margin-top:15px; border:1px solid #ddd; padding:12px; border-radius:8px; background:#fafafa;">
         <div style="font-weight:700; color:#444; font-size:13px; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
            ☁️ GitHub 클라우드 동기화
